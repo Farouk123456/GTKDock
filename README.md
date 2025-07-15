@@ -15,9 +15,11 @@ Compiletime: `X11(Xlib) GLM GTKmm4 gtk-layer-shell`
 
 Runtime: `X11: wmctrl xdotool xprop  Wayland: hyprctl (for hyprland)`
 
-## Building:
+## Building and Installing:
 
-`make clean && make -j $(nproc --ignore=2)`
+Build with make: `make clean && make -j $(nproc --ignore=2)`
+
+Installation: `ln -s $(pwd)/GTKDock $HOME/.local/bin`
 
 ## Usage:
 
