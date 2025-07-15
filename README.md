@@ -1,11 +1,17 @@
 # GTKDock
 
-GTKDock is a GTKmm4 based Dock that tries to be WM agnostic.
+GTKDock is a GTKmm4 based Dock that tries to be WM agnostic inspired by [nwg-dock](https://github.com/nwg-piotr/nwg-dock-hyprland).
 
 It is very much still in development.
-Right now it works best on wayland.
+Right now it works best on hyprland, it works on X11 but animations are choppy.
 
 If WM is wayland it has to support gtk-layer-shell
+
+# Dependencies:
+
+Compiletime: `X11(Xlib) GLM GTKmm4 gtk-layer-shell`
+
+Runtime: `X11: wmctrl xdotool xprop  Wayland: hyprctl (for hyprland)`
 
 # Building:
 
