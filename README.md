@@ -1,4 +1,4 @@
-# # GTKDock
+# GTKDock
 
 GTKDock is a GTKmm4 based Dock that tries to be WM agnostic.
 
@@ -15,7 +15,7 @@ If WM is wayland it has to support gtk-layer-shell
 
 `./GTKDock -d(monitor Index)`
 
-# example:
+# Example:
 
 `./GTKDock -d1`
 
