@@ -7,6 +7,8 @@ Right now it works best on hyprland, it works on X11 but animations are choppy.
 
 If WM is wayland it has to support gtk-layer-shell
 
+![example image](https://github.com/user-attachments/assets/412293b9-2cc6-4e4b-afbe-db8c36df097e)
+
 ## Dependencies:
 
 Compiletime: `X11(Xlib) GLM GTKmm4 gtk-layer-shell`
