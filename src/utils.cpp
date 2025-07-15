@@ -298,3 +298,43 @@ std::string getDesktopFileOfInstances(const std::vector<AppInstance>& instances)
     return (lastFiles.size() > 0) ? getSmallestString(lastFiles) : "";
 }
 
+bool getIfThisIsOnlyInstance()
+{
+    std::vector<pid_t> pids = {};
+    
+    for (const auto& entry : std::filesystem::directory_iterator("/proc")) {
+        if (!entry.is_directory()) continue;
+        
+        // Check if directory name is a PID
+        std::string dirName = entry.path().filename();
+        if (std::all_of(dirName.begin(), dirName.end(), ::isdigit)) {
+            pid_t pid = std::stoi(dirName);
+            
+            // Read the cmdline file
+            std::ifstream cmdlineFile(entry.path() / "cmdline");
+            std::string cmdline;
+            if (cmdlineFile) {
+                std::getline(cmdlineFile, cmdline);
+                if (!cmdline.empty()) {
+                    // cmdline is null-separated, take the first part
+                    size_t nullPos = cmdline.find('\0');
+                    if (nullPos != std::string::npos) {
+                        cmdline = cmdline.substr(0, nullPos);
+                    }
+                    
+                    // Get just the executable name
+                    size_t slashPos = cmdline.rfind('/');
+                    if (slashPos != std::string::npos) {
+                        cmdline = cmdline.substr(slashPos + 1);
+                    }
+                    
+                    if (cmdline == "GTKDock") {
+                        pids.push_back(pid);
+                    }
+                }
+            }
+        }
+    }
+    
+    return ((pids.size()) == 1);
+}

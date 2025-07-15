@@ -33,16 +33,18 @@ std::atomic<bool> running(true);
     icon getss found using gtk in findIconPath()
 */
 
-std::vector<AppEntry> getEntries()
+std::vector<AppEntry> getEntries(bool isolated, int monIdx)
 {
     std::vector<AppEntry> res = {};
+    bool singleInstance = getIfThisIsOnlyInstance();
     // (class, entry)
     std::unordered_map<std::string, AppEntry> entries = {};
     if (current_instances.size() == 0) current_instances = getRunningInstances();
 
     for (AppInstance& inst : current_instances)
     {
-        entries[inst.wclass].instances.push_back(inst);
+        if (singleInstance || (inst.monitorIdx == monIdx))
+            entries[inst.wclass].instances.push_back(inst);
     }
 
     for (auto& pair : entries)
@@ -85,6 +87,9 @@ class Win : public Gtk::Window
             int timeout = 0;
             int duration = 0;
             int edgeMargin = 0;
+            bool autohide = false;
+            std::string launcher_cmd = "";
+            bool isolated_to_monitor = false;
             std::vector <AppEntry> entries = {};
         } appCtx;
 
@@ -130,7 +135,16 @@ class Win : public Gtk::Window
                         } else if (values[0] == "edge_margin")
                         {
                             appCtx.edgeMargin = std::stoi(values[1]);
-                        }
+                        } else if (values[0] == "autohide")
+                        {
+                            appCtx.autohide = (bool)std::stoi(values[1]);
+                        } else if (values[0] == "launcher_cmd")
+                        {
+                            appCtx.launcher_cmd = values[1];
+                        } else if (values[0] == "isolated_to_monitor")
+                        {
+                            appCtx.isolated_to_monitor = (bool)std::stoi(values[1]);
+                        } 
                     }
                 }
 
@@ -215,46 +229,48 @@ class Win : public Gtk::Window
                 });
             }
             
-            add_tick_callback([this, last_time = int64_t{0}](const Glib::RefPtr<Gdk::FrameClock>& clock) mutable {
-                double frame_time_ms = 0;
+            if (appCtx.autohide)
+            {
+                add_tick_callback([this, last_time = int64_t{0}](const Glib::RefPtr<Gdk::FrameClock>& clock) mutable {
+                    double frame_time_ms = 0;
 
-                {
-                    int64_t current_time = clock->get_frame_time();  // microseconds
-
-                    if (last_time != 0) {
-                        int64_t delta_us = current_time - last_time;
-                        frame_time_ms = delta_us / 1000.0;
-                    }
-
-                    last_time = current_time;
-                }
-                
-                if (wanted_state == Win::DockState::Hidden && (state == Win::DockState::Visible || state == Win::DockState::Showing))
-                {
-                    if (std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count() - this->timeWhenMouseLeftDock > this->appCtx.timeout)
                     {
-                        this->state = Win::DockState::Hiding;
+                        int64_t current_time = clock->get_frame_time();  // microseconds
+
+                        if (last_time != 0) {
+                            int64_t delta_us = current_time - last_time;
+                            frame_time_ms = delta_us / 1000.0;
+                        }
+
+                        last_time = current_time;
                     }
-                }
+                    
+                    if (wanted_state == Win::DockState::Hidden && (state == Win::DockState::Visible || state == Win::DockState::Showing))
+                    {
+                        if (std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count() - this->timeWhenMouseLeftDock > this->appCtx.timeout)
+                        {
+                            this->state = Win::DockState::Hiding;
+                        }
+                    }
 
-                if (wanted_state == Win::DockState::Visible && (state == Win::DockState::Hiding || state == Win::DockState::Hidden))
-                {
-                    this->state = Win::DockState::Showing;
-                }
+                    if (wanted_state == Win::DockState::Visible && (state == Win::DockState::Hiding || state == Win::DockState::Hidden))
+                    {
+                        this->state = Win::DockState::Showing;
+                    }
 
-                if (state == Win::DockState::Hiding)
-                {   
-                    if (!animateOut( frame_time_ms / appCtx.duration )) this->state = Win::DockState::Hidden;
-                }
+                    if (state == Win::DockState::Hiding)
+                    {   
+                        if (!animateOut( frame_time_ms / appCtx.duration )) this->state = Win::DockState::Hidden;
+                    }
 
-                if (state == Win::DockState::Showing)
-                {   
-                    if (!animateIn( frame_time_ms / appCtx.duration )) this->state = Win::DockState::Visible;
-                }
+                    if (state == Win::DockState::Showing)
+                    {   
+                        if (!animateIn( frame_time_ms / appCtx.duration )) this->state = Win::DockState::Visible;
+                    }
 
-                return true;
-            });
-
+                    return true;
+                });
+            }
             add_controller(motion_controllerWin);
 
             // relying on polling because i havent found a wm agnostic way to poll fow window client changes
@@ -794,7 +810,7 @@ class Win : public Gtk::Window
         // creates entries vector orders them correctly (pinned seperator unpinned launcher) and adds launcher
         std::vector<AppEntry> loadEntries()
         {
-            std::vector<AppEntry> entries = getEntries();
+            std::vector<AppEntry> entries = getEntries(appCtx.isolated_to_monitor, appCtx.displayIdx);
 
             std::vector <AppEntry> pinned = {};
             std::ifstream file("conf/pinnedApps");
@@ -838,7 +854,7 @@ class Win : public Gtk::Window
             if (appCtx.drawLauncher)
             {
                 entries.push_back( {
-                    0, true, "Launcher", "nwg-drawer", "imgs/launcher.png"
+                    0, true, "Launcher", appCtx.launcher_cmd, "imgs/launcher.png"
                 } );
             }
 

@@ -4,4 +4,7 @@ hotspot_height:5
 autohide_timeout:300
 autohide_duration:300
 draw_launcher:1
-edge_margin:25
+edge_margin:0
+autohide:1
+launcher_cmd:nwg-drawer
+isolated_to_monitor:1
