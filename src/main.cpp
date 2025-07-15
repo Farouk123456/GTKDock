@@ -105,7 +105,7 @@ class Win : public Gtk::Window
             // inits win by first filling out AppContext struct
 
             {
-                std::ifstream conf("conf/config");
+                std::ifstream conf("conf/settings.conf");
                 std::string line;
                 
                 while (std::getline(conf, line))
