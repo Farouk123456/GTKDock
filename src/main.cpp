@@ -18,11 +18,20 @@
 #include "utils.h"
 #include "wm-specific.h"
 
-
+/*
+    wayland: bool checking if XDG_SESSION_TYPE is wayland
+    current_instances: list off all instances i. e. wm managed windows / programs returned by list_windows.bash
+    running: for second thread that updates dock entries that tracks running status
+*/
 bool wayland = false;
 std::vector<AppInstance> current_instances = {};
 std::atomic<bool> running(true);
 
+/*
+    getEntries returns a vector of all wm managed applications each entry has a vector instances(windows) that share the same class
+    instances vector gets used to find desktop file which then fills out the rest of the AppEntry struct using parseDesktopFile()
+    icon getss found using gtk in findIconPath()
+*/
 
 std::vector<AppEntry> getEntries()
 {
@@ -53,9 +62,14 @@ std::vector<AppEntry> getEntries()
     return res;
 }
 
+/*
+    Win: is the Dock Window class
+*/
+
 class Win : public Gtk::Window 
 {
     public:
+        // crucial data for application packaged in one struct for comfort
         struct AppContext
         {
             int icon_size = 0;
@@ -68,29 +82,32 @@ class Win : public Gtk::Window
             int displayIdx = 0;
             int hotspot_height = 0;
             bool drawLauncher = false;
-
+            int timeout = 0;
+            int duration = 0;
             std::vector <AppEntry> entries = {};
         } appCtx;
 
-        
+        // State Machine for animating the Dock to reduce buggy behaviour
         enum class DockState { Hidden, Visible, Hiding, Showing};
         DockState state = DockState::Visible;
         DockState wanted_state = DockState::Hidden;
         int64_t timeWhenMouseLeftDock = 0;
-        int timeout = 300;
-        int duration = 300;
 
 
         Win(int argc, char **argv)
         {
+            // inits win by first filling out AppContext struct
+
             {
+                // to be specified by config file
                 appCtx.icon_size = 48;
                 appCtx.padding = 5;
                 appCtx.hotspot_height = 5;
                 appCtx.icon_bg_size = appCtx.icon_size * (4.f/3.f);
                 appCtx.winH = appCtx.icon_bg_size + 2 * appCtx.padding;
                 appCtx.dockH = appCtx.icon_bg_size;
-                
+                appCtx.timeout = 300;
+                appCtx.duration = 300;
 
                 for (int i = 0; i < argc; i++)
                 {
@@ -123,6 +140,7 @@ class Win : public Gtk::Window
                 appCtx.winW = appCtx.dockW + appCtx.padding;
             }
 
+            // either use gtk-layer-shell protocol to put window on top or add hook to use x11 specific functions to do the same thing
             if (wayland)
             {    
                 GLS_setup_top_layer_bottomEdge(this, appCtx.displayIdx, "GTKDock");
@@ -133,8 +151,11 @@ class Win : public Gtk::Window
                 
             set_default_size(appCtx.winW, appCtx.winH);
             set_title("GTKDock");
+
+            // populate Dock with widgets
             buildDock();
 
+            // logic for auto hide functionality
             auto motion_controllerWin = Gtk::EventControllerMotion::create();
 
             motion_controllerWin->signal_enter().connect([this](double x, double y) mutable {
@@ -181,7 +202,7 @@ class Win : public Gtk::Window
                 
                 if (wanted_state == Win::DockState::Hidden && (state == Win::DockState::Visible || state == Win::DockState::Showing))
                 {
-                    if (std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count() - this->timeWhenMouseLeftDock > this->timeout)
+                    if (std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count() - this->timeWhenMouseLeftDock > this->appCtx.timeout)
                     {
                         this->state = Win::DockState::Hiding;
                     }
@@ -194,12 +215,12 @@ class Win : public Gtk::Window
 
                 if (state == Win::DockState::Hiding)
                 {   
-                    if (!animateOut( frame_time_ms / duration )) this->state = Win::DockState::Hidden;
+                    if (!animateOut( frame_time_ms / appCtx.duration )) this->state = Win::DockState::Hidden;
                 }
 
                 if (state == Win::DockState::Showing)
                 {   
-                    if (!animateIn( frame_time_ms / duration )) this->state = Win::DockState::Visible;
+                    if (!animateIn( frame_time_ms / appCtx.duration )) this->state = Win::DockState::Visible;
                 }
 
                 return true;
@@ -210,13 +231,15 @@ class Win : public Gtk::Window
             // relying on polling because i havent found a wm agnostic way to poll fow window client changes
             Glib::signal_timeout().connect([this]() {
                 updateDock();
-                return true;  // Keep the timer running
+                return true;
             }, 500);
-            
         }
 
+        /*
+            updates Dock by checking if AppEntry vector has changed then rebuilding the Dock
+        */
+
         void updateDock() {
-            //int64_t t0 = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count();
             auto newEntries = loadEntries();
             
             // Check if entries changed
@@ -251,7 +274,6 @@ class Win : public Gtk::Window
                 }
 
                 popovers.clear();
-                widget_positions.clear();
                 appCtx.entries = newEntries;
 
                 appCtx.dockW = (appCtx.entries.size()) * (appCtx.icon_bg_size + appCtx.padding);
@@ -285,10 +307,9 @@ class Win : public Gtk::Window
                     return true;  // Keep the timer running
                 }, 250);  // Update every 1 second
             }
-
-            //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count() - t0 << std::endl;
         }
 
+        // builds the Dock
         void buildDock()
         {
             dock_box = Gtk::Fixed();
@@ -417,6 +438,7 @@ class Win : public Gtk::Window
             set_child(container);
         }
 
+        // cleans up docks widgets and their children and handles popovers
         void cleanupDock() {
             // Unparent all popovers first
             for (auto* popover : popoversofpopovers) {
@@ -437,23 +459,11 @@ class Win : public Gtk::Window
             while (auto* child = dock_box.get_first_child()) {
                 dock_box.remove(*child);
             }
-            widget_positions.clear();
         }
-
-        struct point { double x, y; };
-
-        int offset_y = 0;
-        std::vector<point> widget_positions = {};
 
         void add_widget_to_dock_box(Gtk::Widget& w, double x, double y)
         {
             dock_box.put(w, x, y);
-            widget_positions.push_back({x,y});
-        }
-
-        void moveToOffset()
-        {
-            dock_box.set_margin_top(offset_y);
         }
 
         std::vector<Gtk::Popover *> popovers;
@@ -463,6 +473,13 @@ class Win : public Gtk::Window
         Gtk::Fixed container;
         float t1 = 0;
         float t2 = 0;
+
+        // x11 specific way of moving dock
+        int offset_y = 0;
+        void moveToOffset()
+        {
+            dock_box.set_margin_top(offset_y);
+        }
         
         bool animateOut(float delta)
         {
@@ -534,6 +551,7 @@ class Win : public Gtk::Window
             return true;  
         }
 
+        //populates instance menu with widgets
         void populateInstanceMenu(Gtk::Popover* i_popover, AppInstance inst)
         {
             auto popover_box =  Gtk::make_managed<Gtk::Box>();
@@ -573,6 +591,7 @@ class Win : public Gtk::Window
             popover_box->append(*button2);*/
         }
 
+        // creates popvermenu from an appentry
         Gtk::Popover * get_Menu(AppEntry& e)
         {
             auto m_popover = Gtk::make_managed<Gtk::Popover>();
@@ -743,6 +762,7 @@ class Win : public Gtk::Window
             return m_popover;
         }
 
+        // creates entries vector orders them correctly (pinned seperator unpinned launcher) and adds launcher
         std::vector<AppEntry> loadEntries()
         {
             std::vector<AppEntry> entries = getEntries();
@@ -802,7 +822,11 @@ class Win : public Gtk::Window
         }
 };
 
-// wayland only cus X11 window repositioning is too slow so just move all window contents down
+/*
+    wayland only cus X11 window repositioning is too slow so just move all window contents down
+    sits above everything and does nothing but make dock visible when entered
+*/
+
 class Hotspot : public Gtk::Window 
 {
     int mon = -1;
@@ -888,7 +912,6 @@ int main (int argc, char **argv)
         
         app->add_window(*win);
         win->present();
-
 
         if (wayland)
         {
