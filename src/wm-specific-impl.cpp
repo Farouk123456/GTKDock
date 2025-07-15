@@ -5,8 +5,15 @@
 #include <X11/Xatom.h>
 #include <gdk/x11/gdkx.h>
 
+bool check_layer_shell_support()
+{
+    auto window = Gtk::make_managed<Gtk::Window>();
+    gtk_layer_init_for_window(GTK_WINDOW(window->gobj()));
+    bool supported = gtk_layer_is_supported();
+    return supported;
+}
 
-void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH)
+void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin)
 {
     Display * disp = XOpenDisplay(0);
     unsigned long x_window = gdk_x11_surface_get_xid(GDK_SURFACE(win->get_surface()->gobj()));
@@ -34,19 +41,19 @@ void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH)
     GdkRectangle g;
     gdk_monitor_get_geometry(monitor, &g);
     int x = g.x + (g.width - winW) / 2;
-    int y = g.y + g.height - winH;
+    int y = g.y + g.height - winH - edgeMargin;
     XMoveWindow(disp, x_window, x,y);
 
     XFlush(disp);
 }
 
-void GLS_setup_top_layer_bottomEdge(Gtk::Window * win, int dispIdx, const std::string& name)
+void GLS_setup_top_layer_bottomEdge(Gtk::Window * win, int dispIdx, int edgeMargin, const std::string& name)
 {
     gtk_layer_init_for_window(GTK_WINDOW(win->gobj()));
     gtk_layer_set_anchor(GTK_WINDOW(win->gobj()), GTK_LAYER_SHELL_EDGE_BOTTOM, true);
     gtk_layer_set_layer(GTK_WINDOW(win->gobj()), GTK_LAYER_SHELL_LAYER_TOP);
     gtk_layer_set_namespace(GTK_WINDOW(win->gobj()), name.c_str());
-    gtk_layer_set_margin(GTK_WINDOW(win->gobj()), GTK_LAYER_SHELL_EDGE_BOTTOM, 0);
+    gtk_layer_set_margin(GTK_WINDOW(win->gobj()), GTK_LAYER_SHELL_EDGE_BOTTOM, edgeMargin);
     gtk_layer_set_exclusive_zone(GTK_WINDOW(win->gobj()), -1);
     gtk_layer_set_monitor(GTK_WINDOW(win->gobj()), GDK_MONITOR(Gdk::Display::get_default()->get_monitors()->get_object(dispIdx)->gobj()));
 }

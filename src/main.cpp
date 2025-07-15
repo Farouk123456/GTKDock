@@ -84,6 +84,7 @@ class Win : public Gtk::Window
             bool drawLauncher = false;
             int timeout = 0;
             int duration = 0;
+            int edgeMargin = 0;
             std::vector <AppEntry> entries = {};
         } appCtx;
 
@@ -99,15 +100,45 @@ class Win : public Gtk::Window
             // inits win by first filling out AppContext struct
 
             {
-                // to be specified by config file
-                appCtx.icon_size = 48;
-                appCtx.padding = 5;
-                appCtx.hotspot_height = 5;
+                std::ifstream conf("conf/config");
+                std::string line;
+                
+                while (std::getline(conf, line))
+                {
+                    if (!line.empty())
+                    {
+                        auto values = splitStr(line, ":");
+                        
+                        if (values[0] == "icon_size")
+                        {
+                            appCtx.icon_size = std::stoi(values[1]);
+                        } else if (values[0] == "padding")
+                        {
+                            appCtx.padding = std::stoi(values[1]);
+                        } else if (values[0] == "hotspot_height")
+                        {
+                            appCtx.hotspot_height = std::stoi(values[1]);
+                        } else if (values[0] == "autohide_timeout")
+                        {
+                            appCtx.timeout = std::stoi(values[1]);
+                        } else if (values[0] == "autohide_duration")
+                        {
+                            appCtx.duration = std::stoi(values[1]);
+                        } else if (values[0] == "draw_launcher")
+                        {
+                            appCtx.drawLauncher = (bool)std::stoi(values[1]);
+                        } else if (values[0] == "edge_margin")
+                        {
+                            appCtx.edgeMargin = std::stoi(values[1]);
+                        }
+                    }
+                }
+
+                conf.close();
+
                 appCtx.icon_bg_size = appCtx.icon_size * (4.f/3.f);
                 appCtx.winH = appCtx.icon_bg_size + 2 * appCtx.padding;
                 appCtx.dockH = appCtx.icon_bg_size;
-                appCtx.timeout = 300;
-                appCtx.duration = 300;
 
                 for (int i = 0; i < argc; i++)
                 {
@@ -120,9 +151,7 @@ class Win : public Gtk::Window
                     }
                 }
                 
-                appCtx.drawLauncher = true;
                 appCtx.entries = loadEntries();
-
                 appCtx.dockW = (appCtx.entries.size()) * (appCtx.icon_bg_size + appCtx.padding);
                 
                 bool sep = false;
@@ -143,7 +172,7 @@ class Win : public Gtk::Window
             // either use gtk-layer-shell protocol to put window on top or add hook to use x11 specific functions to do the same thing
             if (wayland)
             {    
-                GLS_setup_top_layer_bottomEdge(this, appCtx.displayIdx, "GTKDock");
+                GLS_setup_top_layer_bottomEdge(this, appCtx.displayIdx, appCtx.edgeMargin, "GTKDock");
             } else
             {
                 signal_realize().connect(sigc::mem_fun(*this, &Win::on_realizeX));
@@ -487,7 +516,7 @@ class Win : public Gtk::Window
             {
                 if (wayland)
                 {
-                    GLS_chngMargin(this, - this->appCtx.winH * t1);
+                    GLS_chngMargin(this, -(this->appCtx.winH + this->appCtx.edgeMargin) * t1);
                 }
                 else
                 {
@@ -501,11 +530,11 @@ class Win : public Gtk::Window
             {
                 if (wayland)
                 {
-                    GLS_chngMargin(this, -this->appCtx.winH);
+                    GLS_chngMargin(this, -(this->appCtx.winH + this->appCtx.edgeMargin));
                 }
                 else
                 {
-                    offset_y = this->appCtx.winH;
+                    offset_y = (this->appCtx.winH + this->appCtx.edgeMargin);
                     moveToOffset();
                 }
                 
@@ -522,11 +551,11 @@ class Win : public Gtk::Window
             {
                 if (wayland)
                 {
-                    GLS_chngMargin(this, -this->appCtx.winH * (1 - t2));
+                    GLS_chngMargin(this, -(this->appCtx.winH + this->appCtx.edgeMargin) * (1 - t2) + this->appCtx.edgeMargin);
                 }
                 else
                 {
-                    offset_y = this->appCtx.winH * (1 - t2);
+                    offset_y = (this->appCtx.winH + this->appCtx.edgeMargin) * (1 - t2) + this->appCtx.edgeMargin;
                     moveToOffset();
                 }
 
@@ -536,7 +565,7 @@ class Win : public Gtk::Window
             {
                 if (wayland)
                 {
-                    GLS_chngMargin(this, 0);
+                    GLS_chngMargin(this, this->appCtx.edgeMargin);
                 }
                 else
                 {
@@ -818,7 +847,7 @@ class Win : public Gtk::Window
 
         void on_realizeX()
         {
-            onrealizeXDock(this, appCtx.displayIdx, appCtx.winW, appCtx.winH);
+            onrealizeXDock(this, appCtx.displayIdx, appCtx.winW, appCtx.winH, appCtx.edgeMargin);
         }
 };
 
@@ -849,7 +878,7 @@ class Hotspot : public Gtk::Window
                 }
             }
             
-            GLS_setup_top_layer_bottomEdge(this, mon, "GTKDock");
+            GLS_setup_top_layer_bottomEdge(this, mon, 0, "GTKDock");
 
             auto motion = Gtk::EventControllerMotion::create();
 
@@ -900,7 +929,14 @@ class Hotspot : public Gtk::Window
 int main (int argc, char **argv)
 {
     wayland = (strcmp(std::getenv("XDG_SESSION_TYPE"), "wayland") == 0);
+ 
     auto app = Gtk::Application::create();
+   
+    if (wayland && !check_layer_shell_support())
+    {
+        std::cout << "gtk-layer-shell protocol is not supported on your wayland WM" << std::endl;
+        app->quit();
+    }
 
     app->signal_startup().connect([app, argc, argv](){
         auto win = Gtk::make_managed<Win>(argc, argv);
