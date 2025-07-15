@@ -1,1 +1,67 @@
-s
+button {
+    all: unset;
+}
+
+window {
+    background: #00000000;
+}
+
+/* works only under wayland simulated for x11 i.e. no css*/
+.hotspot {
+    background: #00000000;
+    box-shadow: inset 0 0 1px rgba(0,0,0,0.01);
+}
+
+.dotbox
+{
+    background-color: #ffffff00;
+}
+
+.dock {
+    background-color: #ffffff00;
+}
+
+.btn {
+    background-color: #00000000;
+    color: white;
+    border: none;
+    border-radius: 25%;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #ffffff5a;
+}
+
+.sep {
+    background-color: #ffffff3a;
+}
+
+popover contents, popover arrow {
+    background-color: #23252e;
+}
+
+.applabel {
+    padding: 0.5em;
+
+}
+
+.mbutton {
+    font-size: 10pt;
+    border-radius: 1em;
+    padding: 0.5em;
+    transition: all 0.15s ease-in-out;
+}
+
+
+.mbutton:hover {
+    background-color: #3d4151;
+}
+
+popover contents {
+    border-radius: 1em;
+}
+
+.sepe {
+    background-color: #0d0e11;
+}
