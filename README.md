@@ -29,7 +29,7 @@ you can add reorder the lines to change the ordering of pinned Apps in the Dock
 GTKDock has been tested on Hyprland and GNOME on Xorg
 
 to add support to other WM's you'd need to
-1. add functionlity for function in WM-Specific.h
+1. add functionlity for function in `WM-Specific.h`
 2. extend list_windows.bash to work for your WM (if it doesn't)
 
 # Cutomization
