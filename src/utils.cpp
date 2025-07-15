@@ -81,12 +81,7 @@ std::string trim(const std::string& str) {
 
 std::string cleanExecCommand(const std::string& cmd) {
     std::string result = cmd;
-    // Remove % parameters
-    size_t percent = result.find('%');
-    if (percent != std::string::npos) {
-        result = result.substr(0, percent);
-    }
-    // Remove leading/trailing whitespace
+
     result = trim(result);
     return result;
 }
@@ -129,7 +124,6 @@ std::string findIconPath(const std::string& iconName) {
 
 AppEntry parseDesktopFile(const std::filesystem::path& desktopFile) {
     AppEntry entry;
-    //entry.desktopFile = desktopFile.string();
     
     std::ifstream file(desktopFile);
     std::string line;
@@ -244,16 +238,6 @@ bool find_case_insensitive(const std::string& str, const std::string& substr) {
     std::string lower_sub = normalizeString(substr);
 
     return (lower_str.find(lower_sub) != std::string::npos);
-}
-
-bool equals_case_insensitive(const std::string& str1, const std::string& str2)
-{
-    return (to_lower(str1) == to_lower(str2));
-}
-
-bool fieldIsRelevant(const std::string& line)
-{
-    return (line.substr(0, 7) != "Comment" && line.substr(0, 4) != "Type" && line.substr(0, 8) != "MimeType");
 }
 
 std::string getSmallestString(const std::vector<std::string>& strings)
