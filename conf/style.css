@@ -2,6 +2,10 @@ button {
     all: unset;
 }
 
+* {
+    color : #fff;
+}
+
 window {
     background: #00000000;
 }
