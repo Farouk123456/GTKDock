@@ -343,7 +343,6 @@ class Win : public Gtk::Window
                     dock_box.remove(*child);  // Remove all children
                 }
 
-                popovers.clear();
                 appCtx.entries = newEntries;
 
                 if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT)
@@ -665,7 +664,9 @@ class Win : public Gtk::Window
                     popover->unparent();
                 }
             }
+
             popovers.clear();
+            widget_positions.clear();
             
             // Now safely remove all children
             while (auto* child = dock_box.get_first_child()) {
@@ -676,6 +677,7 @@ class Win : public Gtk::Window
         void add_widget_to_dock_box(Gtk::Widget& w, double x, double y)
         {
             dock_box.put(w, x, y);
+            widget_positions.push_back({x,y});
         }
 
         std::vector<Gtk::Popover *> popovers;
@@ -686,6 +688,9 @@ class Win : public Gtk::Window
         float t1 = 0;
         float t2 = 0;
 
+        struct point { double x, y; };
+        std::vector<point> widget_positions = {};
+
         // x11 specific way of moving dock
         int offset_y = 0;
         void moveToOffset()
@@ -693,6 +698,10 @@ class Win : public Gtk::Window
             if (appCtx.edge == DockEdge::EDGEBOTTOM) dock_box.set_margin_top(offset_y);
             else if (appCtx.edge == DockEdge::EDGETOP) dock_box.set_margin_top(-offset_y);
 
+            else
+            {
+                container.move(dock_box, offset_y, 0);   
+            }
             /* BUG
                 set_margin_start/end dont work
                 on gnome x11 top edge doesnt hide fully (won't fix)
