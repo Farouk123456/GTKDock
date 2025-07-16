@@ -54,7 +54,7 @@ void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edge
     }
     else if (edge == DockEdge::EDGERIGHT)
     {
-        x = g.x + g.width - edgeMargin;
+        x = g.x + g.width - edgeMargin - winW;
         y = g.y + (g.height - winH) / 2;
     }
     else if (edge == DockEdge::EDGEBOTTOM)
