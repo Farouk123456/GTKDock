@@ -690,8 +690,8 @@ class Win : public Gtk::Window
         int offset_y = 0;
         void moveToOffset()
         {
-            if (appCtx.edge == DockEdge::EDGEBOTTOM) dock_box.set_margin_top(offset_y);
-            else if (appCtx.edge == DockEdge::EDGETOP) dock_box.set_margin_bottom(offset_y);
+            if (appCtx.edge == DockEdge::EDGEBOTTOM) dock_box.set_margin_bottom(offset_y);
+            else if (appCtx.edge == DockEdge::EDGETOP) dock_box.set_margin_bottom((this->appCtx.winH + this->appCtx.edgeMargin) - offset_y);
             else if (appCtx.edge == DockEdge::EDGELEFT) dock_box.set_margin_end(offset_y);
             else dock_box.set_margin_start(offset_y);
         }
