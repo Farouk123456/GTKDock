@@ -119,3 +119,29 @@ void closeInstance(std::vector<AppInstance> instances)
     }
 }
 
+void populateInstanceMenuWithWMSpecific(Gtk::Box* popover_box, AppInstance inst)
+{
+    if (std::getenv("HYPRLAND_INSTANCE_SIGNATURE") != NULL)
+    {
+        auto button2 = Gtk::make_managed<Gtk::Button>("Toggle Floating");
+        
+        button2->signal_clicked().connect([inst](){
+            std::system(("hyprctl dispatch togglefloating \"title:" + inst.title + "\" &").c_str());
+        });
+
+        button2->add_css_class("mbutton");
+        popover_box->append(*button2);
+    } else if(!(strcmp(std::getenv("XDG_SESSION_TYPE"), "wayland") == 0))
+    {
+        auto button2 = Gtk::make_managed<Gtk::Button>(inst.fullscreen ? "Minimize" : "Maximize");
+        
+        button2->signal_clicked().connect([inst](){
+            if (inst.fullscreen) std::system(("wmctrl -r \"" + inst.title + "\" -b add,maximized_vert,maximized_horz &").c_str());
+            else std::system(("wmctrl -r \"" + inst.title + "\" -b add,hidden &").c_str());
+        });
+
+        button2->add_css_class("mbutton");
+        popover_box->append(*button2);
+    }
+}
+      

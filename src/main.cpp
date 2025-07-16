@@ -819,6 +819,8 @@ class Win : public Gtk::Window
             separator1->add_css_class("sepe");
             popover_box->append(*separator1);
 
+            populateInstanceMenuWithWMSpecific(popover_box, inst);
+
             auto button1 = Gtk::make_managed<Gtk::Button>("Close Window");
             button1->signal_clicked().connect([inst](){
                 closeInstance({inst});
@@ -826,15 +828,6 @@ class Win : public Gtk::Window
 
             button1->add_css_class("mbutton");
             popover_box->append(*button1);
-
-            // too wm specific ... tiled vs stacked
-            /*auto button2 = Gtk::make_managed<Gtk::Button>((inst.fullscreen) ? "Minimize" : "Maximize");
-            button2->signal_clicked().connect([this, inst](){
-                toggleMaximizeMinimizeWindow(inst);
-            });
-
-            button2->add_css_class("mbutton");
-            popover_box->append(*button2);*/
         }
 
         // creates popvermenu from an appentry
@@ -865,68 +858,70 @@ class Win : public Gtk::Window
                 label->add_css_class("applabel");
                 m_popover_box->append(*label);
                 
-
-                auto separator1 = Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::HORIZONTAL);
-                separator1->add_css_class("sepe");
-                m_popover_box->append(*separator1);
-
-                for (AppInstance& instance : e.instances)
+                if (e.count_instances > 0)
                 {
-                    auto menubtn = Gtk::make_managed<Gtk::Button>();
-                    menubtn->add_css_class("mbutton");
-                    
-                    auto click_gesture = Gtk::GestureClick::create();
-                    
-                    auto i_popover = Gtk::make_managed<Gtk::Popover>();
-                    popoversofpopovers.push_back(i_popover);
+                    auto separator1 = Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::HORIZONTAL);
+                    separator1->add_css_class("sepe");
+                    m_popover_box->append(*separator1);
 
-                    populateInstanceMenu(i_popover, instance);
-
-                    i_popover->set_position(Gtk::PositionType::RIGHT);
-                    if (appCtx.edge == DockEdge::EDGERIGHT) i_popover->set_position(Gtk::PositionType::LEFT);
-
-                    i_popover->set_parent(*menubtn);
-                    i_popover->signal_realize().connect([i_popover, this]() {
-                        auto motion_controller = Gtk::EventControllerMotion::create();
-
-                        motion_controller->signal_enter().connect([i_popover, this](double x, double y) {
-                            this->wanted_state = Win::DockState::Visible;                        
-                        });
-
-                        motion_controller->signal_leave().connect([i_popover, this]() {
-                            this->wanted_state = Win::DockState::Visible;               
-                        });
+                    for (AppInstance& instance : e.instances)
+                    {
+                        auto menubtn = Gtk::make_managed<Gtk::Button>();
+                        menubtn->add_css_class("mbutton");
                         
-                        i_popover->add_controller(motion_controller);
-                    });
+                        auto click_gesture = Gtk::GestureClick::create();
+                        
+                        auto i_popover = Gtk::make_managed<Gtk::Popover>();
+                        popoversofpopovers.push_back(i_popover);
 
-                    menubtn->signal_clicked().connect([this, menubtn, click_gesture, instance, i_popover](){
-                        i_popover->popup(); // Show the dropdown
-                    });
+                        populateInstanceMenu(i_popover, instance);
+
+                        i_popover->set_position(Gtk::PositionType::RIGHT);
+                        if (appCtx.edge == DockEdge::EDGERIGHT) i_popover->set_position(Gtk::PositionType::LEFT);
+
+                        i_popover->set_parent(*menubtn);
+                        i_popover->signal_realize().connect([i_popover, this]() {
+                            auto motion_controller = Gtk::EventControllerMotion::create();
+
+                            motion_controller->signal_enter().connect([i_popover, this](double x, double y) {
+                                this->wanted_state = Win::DockState::Visible;                        
+                            });
+
+                            motion_controller->signal_leave().connect([i_popover, this]() {
+                                this->wanted_state = Win::DockState::Visible;               
+                            });
+                            
+                            i_popover->add_controller(motion_controller);
+                        });
+
+                        menubtn->signal_clicked().connect([this, menubtn, click_gesture, instance, i_popover](){
+                            i_popover->popup(); // Show the dropdown
+                        });
 
 
-                    auto box =  Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL);
-                    box->set_spacing(5);
-                    
-                    auto label = Gtk::make_managed<Gtk::Label>(instance.title);
-                    label->set_hexpand(true);
-                    label->set_ellipsize(Pango::EllipsizeMode::END);
-                    label->set_max_width_chars(20);
-                    label->set_halign(Gtk::Align::START);
-                    
-                    auto img = Gtk::make_managed<Gtk::Image>(Gio::Icon::create("pan-end-symbolic"));
-                    img->set_halign(Gtk::Align::END);
+                        auto box =  Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL);
+                        box->set_spacing(5);
+                        
+                        auto label = Gtk::make_managed<Gtk::Label>(instance.title);
+                        label->set_hexpand(true);
+                        label->set_ellipsize(Pango::EllipsizeMode::END);
+                        label->set_max_width_chars(20);
+                        label->set_halign(Gtk::Align::START);
+                        
+                        auto img = Gtk::make_managed<Gtk::Image>(Gio::Icon::create("pan-end-symbolic"));
+                        img->set_halign(Gtk::Align::END);
 
-                    box->append(*label);
-                    box->append(*img);
+                        box->append(*label);
+                        box->append(*img);
 
-                    menubtn->set_child(*box);
-                    m_popover_box->append(*menubtn);
+                        menubtn->set_child(*box);
+                        m_popover_box->append(*menubtn);
+                    }
+
+                    auto separator2 = Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::HORIZONTAL);
+                    separator2->add_css_class("sepe");
+                    m_popover_box->append(*separator2);
                 }
-
-                auto separator2 = Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::HORIZONTAL);
-                separator2->add_css_class("sepe");
-                m_popover_box->append(*separator2);
 
                 auto button1 = Gtk::make_managed<Gtk::Button>("New Window");
                 button1->signal_clicked().connect([e](){
@@ -936,14 +931,17 @@ class Win : public Gtk::Window
                 button1->add_css_class("mbutton");
                 m_popover_box->append(*button1);
 
-                auto button2 = Gtk::make_managed<Gtk::Button>((e.instances.size() > 1) ? "Close All Windows" : "Close Window");
-                button2->signal_clicked().connect([e](){
-                    closeInstance(e.instances);
-                });
+                if (e.count_instances > 0)
+                {
+                    auto button2 = Gtk::make_managed<Gtk::Button>((e.instances.size() > 1) ? "Close All Windows" : "Close Window");
+                    button2->signal_clicked().connect([e](){
+                        closeInstance(e.instances);
+                    });
 
-                button2->add_css_class("mbutton");
-                m_popover_box->append(*button2);
-
+                    button2->add_css_class("mbutton");
+                    m_popover_box->append(*button2);
+                }
+                
                 auto button3 = Gtk::make_managed<Gtk::Button>((e.isPinned) ? "Unpin" : "Pin");
                 button3->signal_clicked().connect([e](){
                     if (!e.isPinned)

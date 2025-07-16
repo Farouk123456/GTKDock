@@ -29,3 +29,5 @@ void openInstance(AppInstance i);
 void closeInstance(std::vector<AppInstance> instances);
 
 bool check_layer_shell_support();
+
+void populateInstanceMenuWithWMSpecific(Gtk::Box* popover_box, AppInstance inst);
