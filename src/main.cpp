@@ -691,9 +691,14 @@ class Win : public Gtk::Window
         void moveToOffset()
         {
             if (appCtx.edge == DockEdge::EDGEBOTTOM) dock_box.set_margin_top(offset_y);
-            else if (appCtx.edge == DockEdge::EDGETOP) dock_box.set_margin_bottom(offset_y);
-            else if (appCtx.edge == DockEdge::EDGELEFT) dock_box.set_margin_top(offset_y);
-            else dock_box.set_margin_top(offset_y);
+            else if (appCtx.edge == DockEdge::EDGETOP) dock_box.set_margin_top(-offset_y);
+
+            /* BUG
+                set_margin_start/end dont work
+                on gnome x11 top edge doesnt hide fully (won't fix)
+                no idea what to do to move dock side to side
+                maybe use move but that will be sloow    
+            */
         }
         
         bool animateOut(float delta)
