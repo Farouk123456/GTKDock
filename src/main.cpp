@@ -691,7 +691,7 @@ class Win : public Gtk::Window
         void moveToOffset()
         {
             if (appCtx.edge == DockEdge::EDGEBOTTOM) dock_box.set_margin_top(offset_y);
-            else if (appCtx.edge == DockEdge::EDGETOP) dock_box.set_margin_top(offset_y);
+            else if (appCtx.edge == DockEdge::EDGETOP) dock_box.set_margin_bottom(offset_y);
             else if (appCtx.edge == DockEdge::EDGELEFT) dock_box.set_margin_top(offset_y);
             else dock_box.set_margin_top(offset_y);
         }
