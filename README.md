@@ -27,17 +27,18 @@ Installation: `ln -s $(pwd)/GTKDock $HOME/.local/bin`
 
 ## Usage:
 
-`./GTKDock -d(monitor Index)`
+`GTKDock -d[monIdx] -e[edgeIdx] (Dock Edge Possible values: 0 = left 1 = top 2 = right 3 = bottom)`
 
 conf/pinnedApps stores the pinned Apps and their order in the Format
 
 `name:execCmd:iconPath:desptopFilePath`
 
 you can add reorder the lines to change the ordering of pinned Apps in the Dock
+futher configuration is available in `conf/settings.conf`
 
 ## Example:
 
-`./GTKDock -d1`
+`./GTKDock -d1 -e3`
 
 ## WM Support and Compatibility
 GTKDock has been tested on Hyprland and GNOME on Xorg
