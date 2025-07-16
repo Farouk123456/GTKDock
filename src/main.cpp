@@ -695,7 +695,10 @@ class Win : public Gtk::Window
         int offset_y = 0;
         void moveToOffset()
         {
-            if (appCtx.edge == DockEdge::EDGEBOTTOM) dock_box.set_margin_top(offset_y);
+            if (appCtx.edge == DockEdge::EDGEBOTTOM)
+            {
+                container.move(dock_box, 0, offset_y);   
+            }
             else if (appCtx.edge == DockEdge::EDGETOP)
             {
                 container.move(dock_box, 0, -offset_y);   
@@ -941,7 +944,7 @@ class Win : public Gtk::Window
                     button2->add_css_class("mbutton");
                     m_popover_box->append(*button2);
                 }
-                
+
                 auto button3 = Gtk::make_managed<Gtk::Button>((e.isPinned) ? "Unpin" : "Pin");
                 button3->signal_clicked().connect([e](){
                     if (!e.isPinned)
