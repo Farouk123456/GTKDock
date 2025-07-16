@@ -47,6 +47,55 @@ to add support to other WM's you'd need to
 1. add functionlity for function in `wm-specific-impl.cpp`
 2. extend list_windows.bash to work for your WM (if it doesn't)
 
+### WM specific File: list_windows.bash
+
+Bash script that queries the wm for running applications\
+Returned format should be:
+
+`monitorIdx-:-specificWindowTitle-:-windowClass-:-isFullscreen (0 or 1)-:-PID`
+
+most x11 WMs that support wmctrl xprop and xrandr are implemented as well as hyprland\
+each line is directly tied to an AppInstance in GTKDock
+
+
+### WM specific File: wm-specific.h
+
+defines the wm-specific functions these function are then implemented in wm-specific-impl.cpp
+
+#### `void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin, DockEdge edge)`
+
+Is run on X11 to make window have no decorations be always on top and get ignored by the WM (CWOverrideRedirect)\
+It also moves the window to its correct position
+
+
+If any of those doesn't happen for you this is likely the cause.
+
+#### `void GLS_setup_top_layer(Gtk::Window * win, int dispIdx, int edgeMargin, const std::string& name, DockEdge edge)`
+
+Is run on wayland to make window appear in the TOP layer and be anchored to a display edge
+
+#### `void GLS_chngMargin(Gtk::Window * win, int newMargin, DockEdge edge)`
+
+Chganges the distance between the window edge and the display edge on wayland
+
+#### `void openInstance(AppInstance i)`
+
+makes WM get the instance i.e. focus on it / bring it back from minimized status ...
+
+#### `void closeInstance(std::vector<AppInstance> instances)`
+
+makes WM close the instance(window)
+
+#### `bool check_layer_shell_support()`
+
+checks if gtk-layer-shell protocol is supported
+
+#### `void populateInstanceMenuWithWMSpecific(Gtk::Box* popover_box, AppInstance inst)`
+
+adds buttons to the context menu of an instance that can do arbitrary functionality
+
+for example toggle floating on hyprland
+
 ## Cutomization
 launcher.png is used for the launcher button and style.css is used to style all the elements in the Dock.
 
