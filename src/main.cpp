@@ -529,9 +529,7 @@ class Win : public Gtk::Window
             {
                 GdkRectangle dock = {(int)((appCtx.winW - appCtx.dockW) * 0.5), (int)((appCtx.winH - appCtx.dockH) * 0.5), appCtx.dockW, appCtx.dockH};
                 double sx = dock.x;
-                double sy = 0;
-                
-                if (appCtx.edge == DockEdge::EDGEBOTTOM) sy = dock.y;
+                double sy = dock.y;
                 
                 double sl = appCtx.icon_bg_size;
                 
@@ -746,7 +744,7 @@ class Win : public Gtk::Window
                 else
                 {
                     if (appCtx.edge == DockEdge::EDGEBOTTOM || appCtx.edge == DockEdge::EDGETOP)
-                        offset_y = (this->appCtx.winH + this->appCtx.edgeMargin) * t1;
+                        offset_y = (this->appCtx.winH + this->appCtx.edgeMargin + this->appCtx.padding) * t1; // fix for top edge issue
                     else
                         offset_y = (this->appCtx.winW + this->appCtx.edgeMargin) * t1;
                     moveToOffset();
