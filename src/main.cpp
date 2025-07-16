@@ -1170,6 +1170,16 @@ class Hotspot : public Gtk::Window
 
 int main (int argc, char **argv)
 {
+    std::string path;
+    char buffer[PATH_MAX];
+    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+    if (len != -1) {
+        buffer[len] = '\0';
+        path = buffer;
+    }
+    std::filesystem::path dir = std::filesystem::path(path).parent_path();
+    chdir(dir.string().c_str());
+
     wayland = (strcmp(std::getenv("XDG_SESSION_TYPE"), "wayland") == 0);
  
     auto app = Gtk::Application::create();
