@@ -529,7 +529,10 @@ class Win : public Gtk::Window
             {
                 GdkRectangle dock = {(int)((appCtx.winW - appCtx.dockW) * 0.5), (int)((appCtx.winH - appCtx.dockH) * 0.5), appCtx.dockW, appCtx.dockH};
                 double sx = dock.x;
-                double sy = dock.y;
+                double sy = 0;
+                
+                if (appCtx.edge == DockEdge::EDGEBOTTOM) sy = dock.y;
+                
                 double sl = appCtx.icon_bg_size;
                 
                 auto settings = Gtk::Settings::get_default();
@@ -707,12 +710,6 @@ class Win : public Gtk::Window
             {
                 container.move(dock_box, offset_y, 0);    
             }
-            /* BUG
-                set_margin_start/end dont work
-                on gnome x11 top edge doesnt hide fully (won't fix)
-                no idea what to do to move dock side to side
-                maybe use move but that will be sloow    
-            */
         }
         
         bool animateOut(float delta)

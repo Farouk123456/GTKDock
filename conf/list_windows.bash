@@ -13,11 +13,11 @@ if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then
     exit 0
 fi
 
-############
-### GNOME ###
-############
+#####################
+### Most X11 WM's ###
+#####################
 
-if pgrep -x "gnome-shell" >/dev/null; then
+if [ "$XDG_SESSION_TYPE" = "x11" ]; then
     # Get monitor information
     mapfile -t monitors < <(xrandr --listmonitors | tail -n +2 | awk '{print $1 $4}')
 
