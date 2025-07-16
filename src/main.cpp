@@ -23,6 +23,7 @@
     current_instances: list off all instances i. e. wm managed windows / programs returned by list_windows.bash
     running: for second thread that updates dock entries that tracks running status
 */
+
 bool wayland = false;
 std::vector<AppInstance> current_instances = {};
 std::atomic<bool> running(true);
@@ -90,6 +91,7 @@ class Win : public Gtk::Window
             bool autohide = false;
             std::string launcher_cmd = "";
             bool isolated_to_monitor = false;
+            DockEdge edge = DockEdge::EDGEBOTTOM;
             std::vector <AppEntry> entries = {};
         } appCtx;
 
@@ -103,7 +105,6 @@ class Win : public Gtk::Window
         Win(int argc, char **argv)
         {
             // inits win by first filling out AppContext struct
-
             {
                 std::ifstream conf("conf/settings.conf");
                 std::string line;
@@ -144,7 +145,7 @@ class Win : public Gtk::Window
                         } else if (values[0] == "isolated_to_monitor")
                         {
                             appCtx.isolated_to_monitor = (bool)std::stoi(values[1]);
-                        } 
+                        }
                     }
                 }
 
@@ -162,6 +163,16 @@ class Win : public Gtk::Window
                         unsigned int n_monitors = Gdk::Display::get_default()->get_monitors()->get_n_items();
 
                         if (mon >= 0 && mon < n_monitors) appCtx.displayIdx = mon;
+                    }
+                    if (argv[i][0] == '-' && argv[i][1] == 'e')
+                    {
+                        int edgeIdx = std::stoi(((std::string)argv[i]).substr(2)) % 4;
+                        if (edgeIdx >= 0 && edgeIdx < 4) appCtx.edge = (DockEdge)edgeIdx;
+                    }
+                    if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)
+                    {
+                        std::cout << "GTKDock - Linux Application Dock\n\nUsage: GTKDock -d[monIdx] -e[edgeIdx]\n\n -d[monIdx]: ex. -d0\n -e[edgeIdx]: ex. -e3\n\nDock Edge Possible values: 0 = left 1 = top 2 = right 3 = bottom" << std::endl;
+                        std::exit(0);
                     }
                 }
                 
@@ -181,12 +192,26 @@ class Win : public Gtk::Window
                 if (sep) appCtx.dockW -= appCtx.icon_bg_size + appCtx.padding - 6;
 
                 appCtx.winW = appCtx.dockW + appCtx.padding;
+
+                if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT)
+                {
+                    int dW, dH, wW, wH = 0;
+                    dW = appCtx.dockW;
+                    dH = appCtx.dockH;
+                    wW = appCtx.winW;
+                    wH = appCtx.winH;
+
+                    appCtx.dockW = dH;
+                    appCtx.dockH = dW;
+                    appCtx.winW = wH;
+                    appCtx.winH = wW;
+                }
             }
 
             // either use gtk-layer-shell protocol to put window on top or add hook to use x11 specific functions to do the same thing
             if (wayland)
             {    
-                GLS_setup_top_layer_bottomEdge(this, appCtx.displayIdx, appCtx.edgeMargin, "GTKDock");
+                GLS_setup_top_layer(this, appCtx.displayIdx, appCtx.edgeMargin, "GTKDock", appCtx.edge);
             } else
             {
                 signal_realize().connect(sigc::mem_fun(*this, &Win::on_realizeX));
@@ -321,21 +346,42 @@ class Win : public Gtk::Window
                 popovers.clear();
                 appCtx.entries = newEntries;
 
-                appCtx.dockW = (appCtx.entries.size()) * (appCtx.icon_bg_size + appCtx.padding);
-                
-                bool sep = false;
-                for (AppEntry& e : appCtx.entries)
+                if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT)
                 {
-                    if (e.name == "line")
+                    appCtx.dockH = (appCtx.entries.size()) * (appCtx.icon_bg_size + appCtx.padding);
+                    
+                    bool sep = false;
+                    for (AppEntry& e : appCtx.entries)
                     {
-                        sep = true;
-                        break;
+                        if (e.name == "line")
+                        {
+                            sep = true;
+                            break;
+                        }
                     }
+
+                    if (sep) appCtx.dockH -= appCtx.icon_bg_size + appCtx.padding - 6;
+
+                    appCtx.winH = appCtx.dockH + appCtx.padding;
                 }
+                else
+                {
+                    appCtx.dockW = (appCtx.entries.size()) * (appCtx.icon_bg_size + appCtx.padding);
+                    
+                    bool sep = false;
+                    for (AppEntry& e : appCtx.entries)
+                    {
+                        if (e.name == "line")
+                        {
+                            sep = true;
+                            break;
+                        }
+                    }
 
-                if (sep) appCtx.dockW -= appCtx.icon_bg_size + appCtx.padding - 6;
+                    if (sep) appCtx.dockW -= appCtx.icon_bg_size + appCtx.padding - 6;
 
-                appCtx.winW = appCtx.dockW + appCtx.padding;
+                    appCtx.winW = appCtx.dockW + appCtx.padding;
+                }
 
                 this->set_default_size(appCtx.winW, appCtx.winH);
 
@@ -361,124 +407,245 @@ class Win : public Gtk::Window
             container = Gtk::Fixed();
             dock_box.get_style_context()->add_class("dock");
 
+            if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT)
+            {
+                GdkRectangle dock = {(int)((appCtx.winW - appCtx.dockW) * 0.5), (int)((appCtx.winH - appCtx.dockH) * 0.5), appCtx.dockW, appCtx.dockH};
+                double sx = dock.x;
+                double sy = dock.y;
+                double sl = appCtx.icon_bg_size;
+                
+                auto settings = Gtk::Settings::get_default();
+                
+                // Add N buttons with padding
+                for (int i = 0; i < appCtx.entries.size(); ++i) {
+                    float ssx = sx + (sl - appCtx.icon_size) * 0.5;
+                    float ssy = sy + (sl - appCtx.icon_size) * 0.5;
 
-            GdkRectangle dock = {(int)((appCtx.winW - appCtx.dockW) * 0.5), appCtx.padding, appCtx.dockW, appCtx.dockH};
-            double sx = appCtx.padding;
-            double sy = dock.y;
-            double sl = appCtx.icon_bg_size;
-            
-            auto settings = Gtk::Settings::get_default();
-            
-            // Add N buttons with padding
-            for (int i = 0; i < appCtx.entries.size(); ++i) {
-                float ssx = sx + (sl - appCtx.icon_size) * 0.5;
-                float ssy = sy + (sl - appCtx.icon_size) * 0.5;
-
-                if (appCtx.entries[i].name != "line")
-                {
-                    auto btn = Gtk::make_managed<Gtk::MenuButton>();
-                    btn->set_size_request(sl, sl);
-                    btn->add_css_class("btn");
-                    btn->set_tooltip_text(appCtx.entries[i].name);
-                    
-                    auto pm = get_Menu(appCtx.entries[i]);
-                    
-                    pm->set_parent(*btn);
-                    pm->signal_realize().connect([pm, this]() {
-                        auto motion_controller = Gtk::EventControllerMotion::create();
-
-                        motion_controller->signal_enter().connect([pm, this](double x, double y) {
-                            this->wanted_state = Win::DockState::Visible;                        
-                        });
-
-                        motion_controller->signal_leave().connect([pm, this]() {
-                            this->wanted_state = Win::DockState::Visible;               
-                        });
-                        
-                        pm->add_controller(motion_controller);
-                    });
-
-                    auto click_gesture = Gtk::GestureClick::create();
-                    
-                    click_gesture->set_button(0);
-                    click_gesture->signal_released().connect([this, i, btn, click_gesture, pm](int n_press, double x, double y) {
-                        guint button = click_gesture->get_current_button();
-                        
-                        if (button == GDK_BUTTON_PRIMARY)
-                        {
-                            pm->popdown();
-                            if (this->appCtx.entries[i].count_instances == 0) std::system(("cd ~/  && " + this->appCtx.entries[i].execCmd + " &").c_str());
-                            else 
-                            {
-                                openInstance(this->appCtx.entries[i].instances[0]);
-                            }
-                        } else if (button == GDK_BUTTON_SECONDARY && this->state == Win::DockState::Visible)
-                        {
-                            pm->popup(); // Show the dropdown
-                        }
-                    });
-
-                    btn->add_controller(click_gesture);
-                    auto empty_box = Gtk::make_managed<Gtk::Box>();
-                    btn->set_child(*empty_box);  // No icon shown
-
-                    add_widget_to_dock_box(*btn, sx, sy);
-
-                    auto img = Gtk::make_managed<Gtk::Image>(appCtx.entries[i].iconPath);
-                    img->set_size_request(appCtx.icon_size,appCtx.icon_size);
-                    img->set_can_target(false);
-
-                    add_widget_to_dock_box(*img, ssx, ssy);
-                    
-                    if (appCtx.entries[i].count_instances > 0)
+                    if (appCtx.entries[i].name != "line")
                     {
-                        auto dot_box = Gtk::make_managed<Gtk::DrawingArea>();
-                        dot_box->set_size_request(sl, appCtx.icon_size / 8.f - 2);
-                        dot_box->set_can_target(false);
-                        dot_box->set_content_width(sl);
-                        dot_box->set_content_height(appCtx.icon_size / 8.f - 2);
-                        dot_box->add_css_class("dotbox");
+                        auto btn = Gtk::make_managed<Gtk::MenuButton>();
+                        btn->set_size_request(sl, sl);
+                        btn->add_css_class("btn");
+                        btn->set_tooltip_text(appCtx.entries[i].name);
+                        
+                        auto pm = get_Menu(appCtx.entries[i]);
+                        
+                        pm->set_parent(*btn);
+                        pm->signal_realize().connect([pm, this]() {
+                            auto motion_controller = Gtk::EventControllerMotion::create();
 
-                        dot_box->set_draw_func([this, i](const Cairo::RefPtr<Cairo::Context>& cr, int width, int height){
-                            cr->set_source_rgba(1.0, 1.0, 1.0, 1.0);
+                            motion_controller->signal_enter().connect([pm, this](double x, double y) {
+                                this->wanted_state = Win::DockState::Visible;                        
+                            });
 
-                            if (this->appCtx.entries[i].count_instances == 1)
-                            {
-                                cr->arc ( width / 2.0, height / 2.0,  height / 2.0,      0, 2 * G_PI);
-                            } else if (this->appCtx.entries[i].count_instances == 2)
-                            {
-                                cr->arc ( width / 2.0 - (height / 2.0 + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
-                                cr->arc ( width / 2.0 + (height / 2.0 + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
-                            } else if (this->appCtx.entries[i].count_instances == 3)
-                            {
-                                cr->arc ( width / 2.0, height / 2.0,  height / 2.0,      0, 2 * G_PI);
-                                cr->arc ( width / 2.0 - (height + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
-                                cr->arc ( width / 2.0 + (height + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
-                            } else
-                            {
-                                cr->arc ( width / 2.0 - (height / 2.0 + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
-                                cr->arc ( width / 2.0 + (height / 2.0 + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
-                                cr->arc ( width / 2.0 - 1.5*(height + 2), height / 2.0,  height / 2.0,      0, 2 * G_PI);
-                                cr->arc ( width / 2.0 + 1.5*(height + 2), height / 2.0,  height / 2.0,      0, 2 * G_PI);
-                            }
-
-                            cr->fill();
+                            motion_controller->signal_leave().connect([pm, this]() {
+                                this->wanted_state = Win::DockState::Visible;               
+                            });
+                            
+                            pm->add_controller(motion_controller);
                         });
 
-                        add_widget_to_dock_box(*dot_box, sx, sy + sl - appCtx.icon_size / 8.f + 1);
+                        auto click_gesture = Gtk::GestureClick::create();
+                        
+                        click_gesture->set_button(0);
+                        click_gesture->signal_released().connect([this, i, btn, click_gesture, pm](int n_press, double x, double y) {
+                            guint button = click_gesture->get_current_button();
+                            
+                            if (button == GDK_BUTTON_PRIMARY)
+                            {
+                                pm->popdown();
+                                if (this->appCtx.entries[i].count_instances == 0) std::system(("cd ~/  && " + this->appCtx.entries[i].execCmd + " &").c_str());
+                                else 
+                                {
+                                    openInstance(this->appCtx.entries[i].instances[0]);
+                                }
+                            } else if (button == GDK_BUTTON_SECONDARY && this->state == Win::DockState::Visible)
+                            {
+                                pm->popup(); // Show the dropdown
+                            }
+                        });
+
+                        btn->add_controller(click_gesture);
+                        auto empty_box = Gtk::make_managed<Gtk::Box>();
+                        btn->set_child(*empty_box);  // No icon shown
+
+                        add_widget_to_dock_box(*btn, sx, sy);
+
+                        auto img = Gtk::make_managed<Gtk::Image>(appCtx.entries[i].iconPath);
+                        img->set_size_request(appCtx.icon_size,appCtx.icon_size);
+                        img->set_can_target(false);
+
+                        add_widget_to_dock_box(*img, ssx, ssy);
+                        
+                        if (appCtx.entries[i].count_instances > 0)
+                        {
+                            auto dot_box = Gtk::make_managed<Gtk::DrawingArea>();
+                            dot_box->set_size_request(sl, appCtx.icon_size / 8.f - 2);
+                            dot_box->set_can_target(false);
+                            dot_box->set_content_width(sl);
+                            dot_box->set_content_height(appCtx.icon_size / 8.f - 2);
+                            dot_box->add_css_class("dotbox");
+
+                            dot_box->set_draw_func([this, i](const Cairo::RefPtr<Cairo::Context>& cr, int width, int height){
+                                cr->set_source_rgba(1.0, 1.0, 1.0, 1.0);
+
+                                if (this->appCtx.entries[i].count_instances == 1)
+                                {
+                                    cr->arc ( width / 2.0, height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                } else if (this->appCtx.entries[i].count_instances == 2)
+                                {
+                                    cr->arc ( width / 2.0 - (height / 2.0 + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                    cr->arc ( width / 2.0 + (height / 2.0 + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                } else if (this->appCtx.entries[i].count_instances == 3)
+                                {
+                                    cr->arc ( width / 2.0, height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                    cr->arc ( width / 2.0 - (height + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                    cr->arc ( width / 2.0 + (height + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                } else
+                                {
+                                    cr->arc ( width / 2.0 - (height / 2.0 + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                    cr->arc ( width / 2.0 + (height / 2.0 + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                    cr->arc ( width / 2.0 - 1.5*(height + 2), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                    cr->arc ( width / 2.0 + 1.5*(height + 2), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                }
+
+                                cr->fill();
+                            });
+
+                            add_widget_to_dock_box(*dot_box, sx, sy + sl - appCtx.icon_size / 8.f + 1);
+                        }
+                        sy += sl + appCtx.padding;
                     }
-                    sx += sl + appCtx.padding;
-                }
-                else
-                {
-                    auto sep = Gtk::make_managed<Gtk::Box>();
-                    sep->set_size_request(1, appCtx.dockH - 16);
-                    sep->add_css_class("sep");
-                    add_widget_to_dock_box(*sep, sx, sy + 8);
-                    sx += 6;
+                    else
+                    {
+                        auto sep = Gtk::make_managed<Gtk::Box>();
+                        sep->set_size_request(appCtx.dockW - 16, 1);
+                        sep->add_css_class("sep");
+                        add_widget_to_dock_box(*sep, sx + 8, sy);
+                        sy += 6;
+                    }
                 }
             }
-            
+            else
+            {
+                GdkRectangle dock = {(int)((appCtx.winW - appCtx.dockW) * 0.5), (int)((appCtx.winH - appCtx.dockH) * 0.5), appCtx.dockW, appCtx.dockH};
+                double sx = dock.x;
+                double sy = dock.y;
+                double sl = appCtx.icon_bg_size;
+                
+                auto settings = Gtk::Settings::get_default();
+                
+                // Add N buttons with padding
+                for (int i = 0; i < appCtx.entries.size(); ++i) {
+                    float ssx = sx + (sl - appCtx.icon_size) * 0.5;
+                    float ssy = sy + (sl - appCtx.icon_size) * 0.5;
+
+                    if (appCtx.entries[i].name != "line")
+                    {
+                        auto btn = Gtk::make_managed<Gtk::MenuButton>();
+                        btn->set_size_request(sl, sl);
+                        btn->add_css_class("btn");
+                        btn->set_tooltip_text(appCtx.entries[i].name);
+                        
+                        auto pm = get_Menu(appCtx.entries[i]);
+                        
+                        pm->set_parent(*btn);
+                        pm->signal_realize().connect([pm, this]() {
+                            auto motion_controller = Gtk::EventControllerMotion::create();
+
+                            motion_controller->signal_enter().connect([pm, this](double x, double y) {
+                                this->wanted_state = Win::DockState::Visible;                        
+                            });
+
+                            motion_controller->signal_leave().connect([pm, this]() {
+                                this->wanted_state = Win::DockState::Visible;               
+                            });
+                            
+                            pm->add_controller(motion_controller);
+                        });
+
+                        auto click_gesture = Gtk::GestureClick::create();
+                        
+                        click_gesture->set_button(0);
+                        click_gesture->signal_released().connect([this, i, btn, click_gesture, pm](int n_press, double x, double y) {
+                            guint button = click_gesture->get_current_button();
+                            
+                            if (button == GDK_BUTTON_PRIMARY)
+                            {
+                                pm->popdown();
+                                if (this->appCtx.entries[i].count_instances == 0) std::system(("cd ~/  && " + this->appCtx.entries[i].execCmd + " &").c_str());
+                                else 
+                                {
+                                    openInstance(this->appCtx.entries[i].instances[0]);
+                                }
+                            } else if (button == GDK_BUTTON_SECONDARY && this->state == Win::DockState::Visible)
+                            {
+                                pm->popup(); // Show the dropdown
+                            }
+                        });
+
+                        btn->add_controller(click_gesture);
+                        auto empty_box = Gtk::make_managed<Gtk::Box>();
+                        btn->set_child(*empty_box);  // No icon shown
+
+                        add_widget_to_dock_box(*btn, sx, sy);
+
+                        auto img = Gtk::make_managed<Gtk::Image>(appCtx.entries[i].iconPath);
+                        img->set_size_request(appCtx.icon_size,appCtx.icon_size);
+                        img->set_can_target(false);
+
+                        add_widget_to_dock_box(*img, ssx, ssy);
+                        
+                        if (appCtx.entries[i].count_instances > 0)
+                        {
+                            auto dot_box = Gtk::make_managed<Gtk::DrawingArea>();
+                            dot_box->set_size_request(sl, appCtx.icon_size / 8.f - 2);
+                            dot_box->set_can_target(false);
+                            dot_box->set_content_width(sl);
+                            dot_box->set_content_height(appCtx.icon_size / 8.f - 2);
+                            dot_box->add_css_class("dotbox");
+
+                            dot_box->set_draw_func([this, i](const Cairo::RefPtr<Cairo::Context>& cr, int width, int height){
+                                cr->set_source_rgba(1.0, 1.0, 1.0, 1.0);
+
+                                if (this->appCtx.entries[i].count_instances == 1)
+                                {
+                                    cr->arc ( width / 2.0, height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                } else if (this->appCtx.entries[i].count_instances == 2)
+                                {
+                                    cr->arc ( width / 2.0 - (height / 2.0 + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                    cr->arc ( width / 2.0 + (height / 2.0 + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                } else if (this->appCtx.entries[i].count_instances == 3)
+                                {
+                                    cr->arc ( width / 2.0, height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                    cr->arc ( width / 2.0 - (height + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                    cr->arc ( width / 2.0 + (height + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                } else
+                                {
+                                    cr->arc ( width / 2.0 - (height / 2.0 + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                    cr->arc ( width / 2.0 + (height / 2.0 + 1), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                    cr->arc ( width / 2.0 - 1.5*(height + 2), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                    cr->arc ( width / 2.0 + 1.5*(height + 2), height / 2.0,  height / 2.0,      0, 2 * G_PI);
+                                }
+
+                                cr->fill();
+                            });
+
+                            add_widget_to_dock_box(*dot_box, sx, sy + sl - appCtx.icon_size / 8.f + 1);
+                        }
+                        sx += sl + appCtx.padding;
+                    }
+                    else
+                    {
+                        auto sep = Gtk::make_managed<Gtk::Box>();
+                        sep->set_size_request(1, appCtx.dockH - 16);
+                        sep->add_css_class("sep");
+                        add_widget_to_dock_box(*sep, sx, sy + 8);
+                        sx += 6;
+                    }
+                }
+            }
+        
             container.put(dock_box, 0, 0);
             set_child(container);
         }
@@ -523,7 +690,10 @@ class Win : public Gtk::Window
         int offset_y = 0;
         void moveToOffset()
         {
-            dock_box.set_margin_top(offset_y);
+            if (appCtx.edge == DockEdge::EDGEBOTTOM) dock_box.set_margin_top(offset_y);
+            else if (appCtx.edge == DockEdge::EDGETOP) dock_box.set_margin_bottom(offset_y);
+            else if (appCtx.edge == DockEdge::EDGELEFT) dock_box.set_margin_end(offset_y);
+            else dock_box.set_margin_start(offset_y);
         }
         
         bool animateOut(float delta)
@@ -532,11 +702,17 @@ class Win : public Gtk::Window
             {
                 if (wayland)
                 {
-                    GLS_chngMargin(this, -(this->appCtx.winH + this->appCtx.edgeMargin) * t1);
+                    if (appCtx.edge == DockEdge::EDGEBOTTOM || appCtx.edge == DockEdge::EDGETOP)
+                        GLS_chngMargin(this, -(this->appCtx.winH + this->appCtx.edgeMargin) * t1, appCtx.edge);
+                    else
+                        GLS_chngMargin(this, -(this->appCtx.winW + this->appCtx.edgeMargin) * t1, appCtx.edge);
                 }
                 else
                 {
-                    offset_y = this->appCtx.winH * t1;
+                    if (appCtx.edge == DockEdge::EDGEBOTTOM || appCtx.edge == DockEdge::EDGETOP)
+                        offset_y = (this->appCtx.winH + this->appCtx.edgeMargin) * t1;
+                    else
+                        offset_y = (this->appCtx.winW + this->appCtx.edgeMargin) * t1;
                     moveToOffset();
                 }
             
@@ -546,11 +722,17 @@ class Win : public Gtk::Window
             {
                 if (wayland)
                 {
-                    GLS_chngMargin(this, -(this->appCtx.winH + this->appCtx.edgeMargin));
+                    if (appCtx.edge == DockEdge::EDGEBOTTOM || appCtx.edge == DockEdge::EDGETOP)
+                        GLS_chngMargin(this, -(this->appCtx.winH + this->appCtx.edgeMargin), appCtx.edge);
+                    else
+                        GLS_chngMargin(this, -(this->appCtx.winW + this->appCtx.edgeMargin), appCtx.edge);
                 }
                 else
                 {
-                    offset_y = (this->appCtx.winH + this->appCtx.edgeMargin);
+                    if (appCtx.edge == DockEdge::EDGEBOTTOM || appCtx.edge == DockEdge::EDGETOP)
+                        offset_y = (this->appCtx.winH + this->appCtx.edgeMargin) * t1;
+                    else
+                        offset_y = (this->appCtx.winW + this->appCtx.edgeMargin) * t1;
                     moveToOffset();
                 }
                 
@@ -567,11 +749,17 @@ class Win : public Gtk::Window
             {
                 if (wayland)
                 {
-                    GLS_chngMargin(this, -(this->appCtx.winH + this->appCtx.edgeMargin) * (1 - t2) + this->appCtx.edgeMargin);
+                    if (appCtx.edge == DockEdge::EDGEBOTTOM || appCtx.edge == DockEdge::EDGETOP)
+                        GLS_chngMargin(this, -(this->appCtx.winH + this->appCtx.edgeMargin) * (1 - t2) + this->appCtx.edgeMargin, appCtx.edge);
+                    else
+                        GLS_chngMargin(this, -(this->appCtx.winW + this->appCtx.edgeMargin) * (1 - t2) + this->appCtx.edgeMargin, appCtx.edge);    
                 }
                 else
                 {
-                    offset_y = (this->appCtx.winH + this->appCtx.edgeMargin) * (1 - t2) + this->appCtx.edgeMargin;
+                    if (appCtx.edge == DockEdge::EDGEBOTTOM || appCtx.edge == DockEdge::EDGETOP)
+                        offset_y = (this->appCtx.winH + this->appCtx.edgeMargin) * (1 - t2) + this->appCtx.edgeMargin;
+                    else
+                        offset_y = (this->appCtx.winW + this->appCtx.edgeMargin) * (1 - t2) + this->appCtx.edgeMargin;
                     moveToOffset();
                 }
 
@@ -581,11 +769,11 @@ class Win : public Gtk::Window
             {
                 if (wayland)
                 {
-                    GLS_chngMargin(this, this->appCtx.edgeMargin);
+                    GLS_chngMargin(this, this->appCtx.edgeMargin, appCtx.edge);
                 }
                 else
                 {
-                    offset_y = 0;
+                    offset_y = this->appCtx.edgeMargin;
                     moveToOffset();
                 }
 
@@ -643,6 +831,11 @@ class Win : public Gtk::Window
             popovers.push_back(m_popover);
             m_popover->set_size_request(3*appCtx.icon_bg_size, -1);
             m_popover->set_expand(false);
+            
+            if (appCtx.edge == DockEdge::EDGERIGHT) m_popover->set_position(Gtk::PositionType::LEFT);
+            else if (appCtx.edge == DockEdge::EDGEBOTTOM) m_popover->set_position(Gtk::PositionType::TOP);
+            else if (appCtx.edge == DockEdge::EDGELEFT) m_popover->set_position(Gtk::PositionType::RIGHT);
+            else if (appCtx.edge == DockEdge::EDGETOP) m_popover->set_position(Gtk::PositionType::BOTTOM);
 
             auto m_popover_box =  Gtk::make_managed<Gtk::Box>();
 
@@ -677,6 +870,8 @@ class Win : public Gtk::Window
                     populateInstanceMenu(i_popover, instance);
 
                     i_popover->set_position(Gtk::PositionType::RIGHT);
+                    if (appCtx.edge == DockEdge::EDGERIGHT) i_popover->set_position(Gtk::PositionType::LEFT);
+
                     i_popover->set_parent(*menubtn);
                     i_popover->signal_realize().connect([i_popover, this]() {
                         auto motion_controller = Gtk::EventControllerMotion::create();
@@ -796,7 +991,7 @@ class Win : public Gtk::Window
 
                 auto button2 = Gtk::make_managed<Gtk::Button>("Close Dock");
                 button2->signal_clicked().connect([this](){
-                    this->get_application()->quit();
+                    std::exit(0);
                 });
 
                 button2->add_css_class("mbutton");
@@ -863,7 +1058,7 @@ class Win : public Gtk::Window
 
         void on_realizeX()
         {
-            onrealizeXDock(this, appCtx.displayIdx, appCtx.winW, appCtx.winH, appCtx.edgeMargin);
+            onrealizeXDock(this, appCtx.displayIdx, appCtx.winW, appCtx.winH, appCtx.edgeMargin, appCtx.edge);
         }
 };
 
@@ -894,7 +1089,7 @@ class Hotspot : public Gtk::Window
                 }
             }
             
-            GLS_setup_top_layer_bottomEdge(this, mon, 0, "GTKDock");
+            GLS_setup_top_layer(this, mon, 0, "GTKDock", win->appCtx.edge);
 
             auto motion = Gtk::EventControllerMotion::create();
 
@@ -917,9 +1112,16 @@ class Hotspot : public Gtk::Window
 
             motion->signal_leave().connect([this, win] () {
 
-                if (last_x <= 5 || last_x >= win->appCtx.winW - 5)
+                if ((win->appCtx.edge == DockEdge::EDGEBOTTOM || win->appCtx.edge == DockEdge::EDGETOP))
                 {
-                    if (win->state == Win::DockState::Visible || win->state == Win::DockState::Showing)
+                    if ((last_x <= win->appCtx.padding || last_x >= win->appCtx.winW - win->appCtx.padding) && (win->state == Win::DockState::Visible || win->state == Win::DockState::Showing))
+                    {
+                        win->timeWhenMouseLeftDock = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count();
+                        win->wanted_state = Win::DockState::Hidden;
+                    }
+                } else
+                {
+                    if ((last_y <= win->appCtx.padding || last_y >= win->appCtx.winH - win->appCtx.padding) && (win->state == Win::DockState::Visible || win->state == Win::DockState::Showing))
                     {
                         win->timeWhenMouseLeftDock = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count();
                         win->wanted_state = Win::DockState::Hidden;
@@ -931,13 +1133,24 @@ class Hotspot : public Gtk::Window
             add_controller(motion);
         
             set_decorated(false);
-            set_default_size(win->appCtx.winW, win->appCtx.hotspot_height);
+
+            if ((win->appCtx.edge == DockEdge::EDGEBOTTOM || win->appCtx.edge == DockEdge::EDGETOP))
+                set_default_size(win->appCtx.winW, win->appCtx.hotspot_height);
+            else
+                set_default_size(win->appCtx.hotspot_height, win->appCtx.winH);
+
             set_title("hotspot");
             add_css_class("hotspot");
             win->property_default_width().signal_changed().connect([this](){
                 int w,h;
                 this->win->get_default_size(w, h);
                 this->set_default_size(w, this->win->appCtx.hotspot_height);
+            });
+
+            win->property_default_height().signal_changed().connect([this](){
+                int w,h;
+                this->win->get_default_size(w, h);
+                this->set_default_size(this->win->appCtx.hotspot_height, h);
             });
         }
 };
@@ -951,7 +1164,7 @@ int main (int argc, char **argv)
     if (wayland && !check_layer_shell_support())
     {
         std::cout << "gtk-layer-shell protocol is not supported on your wayland WM" << std::endl;
-        app->quit();
+        std::exit(0);
     }
 
     app->signal_startup().connect([app, argc, argv](){

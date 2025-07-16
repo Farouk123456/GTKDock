@@ -38,6 +38,14 @@ struct AppEntry
     std::vector <AppInstance> instances = {};
 };
 
+enum class DockEdge
+{
+    EDGELEFT = 0,
+    EDGETOP,
+    EDGERIGHT,
+    EDGEBOTTOM
+};
+
 // utility functions
 
 // split string ex. "a-b-c-d" into {"a", "b", "c", "d"}

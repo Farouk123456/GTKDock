@@ -13,7 +13,7 @@ bool check_layer_shell_support()
     return supported;
 }
 
-void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin)
+void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin, DockEdge edge)
 {
     Display * disp = XOpenDisplay(0);
     unsigned long x_window = gdk_x11_surface_get_xid(GDK_SURFACE(win->get_surface()->gobj()));
@@ -40,27 +40,51 @@ void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edge
     
     GdkRectangle g;
     gdk_monitor_get_geometry(monitor, &g);
-    int x = g.x + (g.width - winW) / 2;
-    int y = g.y + g.height - winH - edgeMargin;
+    int x, y = 0;
+
+    if (edge == DockEdge::EDGELEFT)
+    {
+        x = g.x + edgeMargin;
+        y = g.y + (g.height - winH) / 2;
+    }
+    else if (edge == DockEdge::EDGETOP)
+    {
+        x = g.x + (g.width - winW) / 2;
+        y = g.y + edgeMargin;
+    }
+    else if (edge == DockEdge::EDGERIGHT)
+    {
+        x = g.x + g.width - edgeMargin;
+        y = g.y + (g.height - winH) / 2;
+    }
+    else if (edge == DockEdge::EDGEBOTTOM)
+    {
+        x = g.x + (g.width - winW) / 2;
+        y = g.y + g.height - winH - edgeMargin;
+    }
+
     XMoveWindow(disp, x_window, x,y);
 
     XFlush(disp);
 }
 
-void GLS_setup_top_layer_bottomEdge(Gtk::Window * win, int dispIdx, int edgeMargin, const std::string& name)
+void GLS_setup_top_layer(Gtk::Window * win, int dispIdx, int edgeMargin, const std::string& name, DockEdge edge)
 {
+    GtkLayerShellEdge ed = (edge == DockEdge::EDGELEFT) ? GTK_LAYER_SHELL_EDGE_LEFT : (edge == DockEdge::EDGETOP) ? GTK_LAYER_SHELL_EDGE_TOP : (edge == DockEdge::EDGERIGHT) ? GTK_LAYER_SHELL_EDGE_RIGHT : GTK_LAYER_SHELL_EDGE_BOTTOM;
+
     gtk_layer_init_for_window(GTK_WINDOW(win->gobj()));
-    gtk_layer_set_anchor(GTK_WINDOW(win->gobj()), GTK_LAYER_SHELL_EDGE_BOTTOM, true);
+    gtk_layer_set_anchor(GTK_WINDOW(win->gobj()), ed, true);
     gtk_layer_set_layer(GTK_WINDOW(win->gobj()), GTK_LAYER_SHELL_LAYER_TOP);
     gtk_layer_set_namespace(GTK_WINDOW(win->gobj()), name.c_str());
-    gtk_layer_set_margin(GTK_WINDOW(win->gobj()), GTK_LAYER_SHELL_EDGE_BOTTOM, edgeMargin);
+    gtk_layer_set_margin(GTK_WINDOW(win->gobj()), ed, edgeMargin);
     gtk_layer_set_exclusive_zone(GTK_WINDOW(win->gobj()), -1);
     gtk_layer_set_monitor(GTK_WINDOW(win->gobj()), GDK_MONITOR(Gdk::Display::get_default()->get_monitors()->get_object(dispIdx)->gobj()));
 }
 
-void GLS_chngMargin(Gtk::Window * win, int newMargin)
+void GLS_chngMargin(Gtk::Window * win, int newMargin, DockEdge edge)
 {
-    gtk_layer_set_margin(GTK_WINDOW(win->gobj()), GTK_LAYER_SHELL_EDGE_BOTTOM, newMargin);
+    GtkLayerShellEdge ed = (edge == DockEdge::EDGELEFT) ? GTK_LAYER_SHELL_EDGE_LEFT : (edge == DockEdge::EDGETOP) ? GTK_LAYER_SHELL_EDGE_TOP : (edge == DockEdge::EDGERIGHT) ? GTK_LAYER_SHELL_EDGE_RIGHT : GTK_LAYER_SHELL_EDGE_BOTTOM;
+    gtk_layer_set_margin(GTK_WINDOW(win->gobj()), ed, newMargin);
 }
 
 void openInstance(AppInstance i)

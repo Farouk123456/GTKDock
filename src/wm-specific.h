@@ -18,11 +18,11 @@
 #include <gtkmm-4.0/gtkmm.h>
 #include "utils.h"
 
-void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin);
+void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin, DockEdge edge);
 
-void GLS_setup_top_layer_bottomEdge(Gtk::Window * win, int dispIdx, int edgeMargin, const std::string& name);
+void GLS_setup_top_layer(Gtk::Window * win, int dispIdx, int edgeMargin, const std::string& name, DockEdge edge);
 
-void GLS_chngMargin(Gtk::Window * win, int newMargin);
+void GLS_chngMargin(Gtk::Window * win, int newMargin, DockEdge edge);
 
 void openInstance(AppInstance i);
 
