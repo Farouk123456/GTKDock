@@ -698,9 +698,12 @@ class Win : public Gtk::Window
             if (appCtx.edge == DockEdge::EDGEBOTTOM) dock_box.set_margin_top(offset_y);
             else if (appCtx.edge == DockEdge::EDGETOP) dock_box.set_margin_top(-offset_y);
 
-            else
+            else if (appCtx.edge == DockEdge::EDGELEFT)
             {
-                container.move(dock_box, offset_y, 0);   
+                container.move(dock_box, -offset_y, 0);   
+            } else
+            {
+                container.move(dock_box, offset_y, 0);    
             }
             /* BUG
                 set_margin_start/end dont work
