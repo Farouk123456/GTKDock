@@ -1,5 +1,0 @@
-Brave Web Browser:/usr/bin/brave-browser-stable:/home/farouk/.local/share/icons/candy-icons/apps/scalable/brave-browser.svg:/usr/share/applications/brave-browser.desktop
-Visual Studio Code:/usr/share/code/code:/home/farouk/.local/share/icons/candy-icons/apps/scalable/vscode.svg:/usr/share/applications/code.desktop
-Terminal:gnome-terminal:/home/farouk/.local/share/icons/candy-icons/apps/scalable/org.gnome.Terminal.svg:/usr/share/applications/org.gnome.Terminal.desktop
-Files:nautilus --new-window:/home/farouk/.local/share/icons/candy-icons/apps/scalable/org.gnome.Nautilus.svg:/usr/share/applications/org.gnome.Nautilus.desktop
-WhatsApp Web:/opt/brave.com/brave/brave-browser --profile-directory=Default --app-id=hnpfjngllnobngcgfapefoaidbinmjnm:/home/farouk/.local/share/icons/candy-icons/apps/scalable/brave-hnpfjngllnobngcgfapefoaidbinmjnm-Default.svg:/home/farouk/.local/share/applications/brave-hnpfjngllnobngcgfapefoaidbinmjnm-Default.desktop
