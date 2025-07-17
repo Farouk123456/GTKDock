@@ -25,7 +25,7 @@
 */
 
 bool wayland = false;
-std::vector<AppInstance> current_instances = {};
+std::atomic<std::vector<AppInstance>> current_instances = {};
 std::atomic<bool> running(true);
 
 /*
