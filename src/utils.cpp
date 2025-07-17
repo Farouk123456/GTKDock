@@ -1,5 +1,12 @@
 #include "utils.h"
 
+std::string getRes(std::string file)
+{
+    if (std::filesystem::exists(Glib::get_home_dir() + "/.config/GTKDock"))
+        return Glib::get_home_dir() + "/.config/GTKDock/" + file;
+    return file;
+}
+
 std::vector<std::string> splitStr(std::string str, std::string separator)
 {
     std::vector<std::string> result;
@@ -190,7 +197,7 @@ std::vector<AppInstance> getRunningInstances()
     
     char buffer[256];
     
-    FILE* pipe = popen("bash conf/list_windows.bash", "r");
+    FILE* pipe = popen(("bash "+ getRes("conf/list_windows.bash")).c_str(), "r");
     if (!pipe) {
         std::cout << "popen failed!" << std::endl;
         return inst;
@@ -199,6 +206,21 @@ std::vector<AppInstance> getRunningInstances()
     try {
         while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
             std::vector<std::string> s = splitStr(buffer, "-:-");
+            
+            for (int i = 0; i < s.size(); i++)
+            {
+                if (s[i].empty())
+                {
+                    if (i == 0 || i == 3 || i == 4)
+                    {
+                        s[i] = "0";
+                    } else
+                    {
+                        s[i] = "-";
+                    }
+                }
+            }
+            
             inst.push_back( { std::stoi(s[0]), s[1], s[2], (bool)std::stoi(s[3]), std::stoi(s[4]) } );
         }
     } catch (...) {

@@ -92,3 +92,5 @@ std::string getSmallestString(const std::vector<std::string>& strings);
 std::string getDesktopFileOfInstances(const std::vector<AppInstance>& instances);
 
 bool getIfThisIsOnlyInstance();
+
+std::string getRes(std::string file);

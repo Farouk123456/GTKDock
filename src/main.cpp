@@ -106,7 +106,7 @@ class Win : public Gtk::Window
         {
             // inits win by first filling out AppContext struct
             {
-                std::ifstream conf("conf/settings.conf");
+                std::ifstream conf(getRes("conf/settings.conf"));
                 std::string line;
                 
                 while (std::getline(conf, line))
@@ -949,7 +949,7 @@ class Win : public Gtk::Window
                 button3->signal_clicked().connect([e](){
                     if (!e.isPinned)
                     {
-                        std::ofstream file("conf/pinnedApps", std::ios_base::app);
+                        std::ofstream file(getRes("conf/pinnedApps"), std::ios_base::app);
                         
                         if (file.is_open()) {
                             file << (e.name + ":" + e.execCmd + ":" + e.iconPath + ":" + e.desktopFile) << "\n";  // Add newline if needed
@@ -961,7 +961,7 @@ class Win : public Gtk::Window
                     } else
                     {
                         std::ofstream temp("temp.txt");
-                        std::ifstream file("conf/pinnedApps");
+                        std::ifstream file(getRes("conf/pinnedApps"));
                         
                         std::string line;
                         
@@ -977,8 +977,8 @@ class Win : public Gtk::Window
                             temp.close();
                             
                             // Remove original file and rename temp file
-                            std::remove("conf/pinnedApps");
-                            std::rename("temp.txt", "conf/pinnedApps");
+                            std::remove(getRes("conf/pinnedApps").c_str());
+                            std::rename("temp.txt", getRes("conf/pinnedApps").c_str());
                         } else {
                             std::cerr << "Error opening files!" << std::endl;
                         }                    }
@@ -1022,7 +1022,7 @@ class Win : public Gtk::Window
             std::vector<AppEntry> entries = getEntries(appCtx.isolated_to_monitor, appCtx.displayIdx);
 
             std::vector <AppEntry> pinned = {};
-            std::ifstream file("conf/pinnedApps");
+            std::ifstream file(getRes("conf/pinnedApps"));
 
             // Check if the file was opened successfully
             if (!file.is_open()) {
@@ -1183,6 +1183,17 @@ int main (int argc, char **argv)
 
     wayland = (strcmp(std::getenv("XDG_SESSION_TYPE"), "wayland") == 0);
  
+    if (!std::filesystem::exists(Glib::get_home_dir() + "/.config/GTKDock"))
+    {
+        std::cout << "\n~/.config/GTKDock doesn't exist.\ncreate it and move conf and imgs directories into it\nto use this Programm without the project files i.e. executable only\n"<< std::endl;
+    
+        if(!std::filesystem::exists("./conf") || !std::filesystem::exists("./imgs"))
+        {
+            std::cout << "\nCouldn't find conf or imgs directories\nmake sure they exist either in workingDir or in ~/.config/GTKDock" << std::endl;
+            std::exit(0);
+        }
+    }
+
     auto app = Gtk::Application::create();
    
     if (wayland && !check_layer_shell_support())
@@ -1195,7 +1206,7 @@ int main (int argc, char **argv)
         auto win = Gtk::make_managed<Win>(argc, argv);
         
         Glib::RefPtr<Gtk::CssProvider> css_provider = Gtk::CssProvider::create();
-        css_provider->load_from_path("conf/style.css");
+        css_provider->load_from_path(getRes("conf/style.css"));
             
         win->get_style_context()->add_provider_for_display(Gdk::Display::get_default(), css_provider, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         
