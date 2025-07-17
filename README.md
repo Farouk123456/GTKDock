@@ -10,7 +10,7 @@ If WM is wayland it has to support gtk-layer-shell
 ![example image](https://github.com/user-attachments/assets/412293b9-2cc6-4e4b-afbe-db8c36df097e)
 
 <p align="center">
-  <img width="623" height="312" src="https://github.com/user-attachments/assets/0b249bd9-f204-46f2-8dec-821f0401ee4b">
+  <img width="623" height="312" src="https://github.com/user-attachments/assets/5b1ddcb1-9d7f-442f-a886-23d14b7b89da">
 </p>
 
 ## Dependencies:
@@ -23,7 +23,8 @@ Runtime: `X11: wmctrl xdotool xprop  Wayland: hyprctl (for hyprland)`
 
 Build with make: `make clean && make -j $(nproc --ignore=2)`
 
-Installation: `ln -s $(pwd)/GTKDock $HOME/.local/bin`
+Installation: `ln -s $(pwd)/GTKDock $HOME/.local/bin`\
+Or (if ~/.config/GTKDock exists): `mv ./GTKDock ~/.local/bin/`
 
 ## Usage:
 
@@ -35,6 +36,9 @@ conf/pinnedApps stores the pinned Apps and their order in the Format
 
 you can add reorder the lines to change the ordering of pinned Apps in the Dock
 futher configuration is available in `conf/settings.conf`
+
+There are two ways of using GTKDock either leaving it in its Project Dir and linking to it\
+or moving config and imgs folders to ~/.config/GTKDock so one can use the executable anywhere
 
 ## Example:
 
