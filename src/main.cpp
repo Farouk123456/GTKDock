@@ -25,8 +25,10 @@
 */
 
 bool wayland = false;
-std::atomic<std::vector<AppInstance>> current_instances = {};
+std::vector<AppInstance> current_instances = {};
 std::atomic<bool> running(true);
+std::mutex instances_mutex;
+
 
 /*
     getEntries returns a vector of all wm managed applications each entry has a vector instances(windows) that share the same class
@@ -36,6 +38,7 @@ std::atomic<bool> running(true);
 
 std::vector<AppEntry> getEntries(bool isolated, int monIdx)
 {
+    std::lock_guard<std::mutex> lock(instances_mutex);
     std::vector<AppEntry> res = {};
     bool singleInstance = getIfThisIsOnlyInstance();
     // (class, entry)
@@ -1223,8 +1226,12 @@ int main (int argc, char **argv)
     });
 
     std::thread monitoringThread([](){
-        while (running) {
-            current_instances = getRunningInstances();
+        while (running)
+        {
+            {
+                std::lock_guard<std::mutex> lock(instances_mutex);
+                current_instances = getRunningInstances();
+            }
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
         }
     });
