@@ -191,11 +191,41 @@ std::string exec(const std::string& command)
     return result;
 }
 
+
+// ugly C functions
+
+char *readLine(FILE *stream)
+{
+    char *buffer = NULL;
+    size_t size = 0;
+    char *newline_found = NULL;
+ 
+    do
+    {
+        char *temp = (char *)realloc(buffer, size + BUFSIZ);
+        if (!temp)
+        {
+            free(buffer);
+            return NULL;
+        }
+        buffer = temp;
+ 
+        if (!fgets(buffer + size, BUFSIZ, stream))
+        {
+            free(buffer);
+            return NULL;
+        }
+ 
+        newline_found = strchr(buffer + size, '\n');
+    } while (!newline_found && (size += BUFSIZ - 1));
+ 
+    return buffer;
+}
+
 std::vector<AppInstance> getRunningInstances()
 {
     std::vector<AppInstance> inst = {};
-    
-    char buffer[256];
+    char * buffer = NULL;
     
     FILE* pipe = popen(("bash "+ getRes("conf/list_windows.bash")).c_str(), "r");
     if (!pipe) {
@@ -204,7 +234,7 @@ std::vector<AppInstance> getRunningInstances()
     }
 
     try {
-        while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
+        while ((buffer = readLine(pipe)) != NULL) {
             std::vector<std::string> s = splitStr(buffer, "-:-");
             
             for (int i = 0; i < s.size(); i++)
@@ -280,44 +310,78 @@ std::string getSmallestString(const std::vector<std::string>& strings)
     return strings[ind];
 }
 
+// (class, desktopfile)
+std::unordered_map <std::string, std::string> desktopfileCache;
+
 std::string getDesktopFileOfInstances(const std::vector<AppInstance>& instances)
 {
     std::string wclass = instances[0].wclass;
-    std::string title = instances[0].title;
+
+    if (desktopfileCache.contains(wclass))
+        return desktopfileCache[wclass];
+
     std::vector <std::string> lastFiles = {};
 
     for (const auto& path : searchPaths)
     {
         if (std::filesystem::exists(path / ((wclass) + ".desktop")))
         {
-            return (path / ((wclass) + ".desktop")).string();
+            desktopfileCache[wclass] = (path / ((wclass) + ".desktop")).string();
+            return desktopfileCache[wclass];
         }
         else if (std::filesystem::exists(path / (to_lower(wclass) + ".desktop")))
         {
-            return (path / (to_lower(wclass) + ".desktop")).string();
+            desktopfileCache[wclass] = (path / (to_lower(wclass) + ".desktop")).string();
+            return desktopfileCache[wclass];
         }
     }
 
     for (const auto& desktopFile : DesktopFiles)
     {
         std::string desktopFileName = desktopFile.stem().string();
-        bool addedToLastResort = false;
-
+    
         if (find_case_insensitive(desktopFileName, wclass))
         {
-            return desktopFile;
+            desktopfileCache[wclass] = desktopFile;
+            return desktopfileCache[wclass];
         }
     
-        if (!addedToLastResort && find_case_insensitive(desktopFile.stem().string(), splitStr(title, " ")[0]))
+        for (AppInstance in : instances)
         {
-            lastFiles.emplace_back(desktopFile);
-            addedToLastResort = true;
-        }
+            bool addedToLastResort = false;
 
+            if (!addedToLastResort && find_case_insensitive(desktopFile.stem().string(), splitStr(in.title, " ")[0]))
+            {
+                lastFiles.emplace_back(desktopFile);
+                addedToLastResort = true;
+            }
+        }
     }
 
-    // heuristic smallest filename is best
-    return (lastFiles.size() > 0) ? getSmallestString(lastFiles) : "";
+    // heuristic smallest filepath is best
+    if (lastFiles.size() > 0)
+    {
+        desktopfileCache[wclass] = getSmallestString(lastFiles);
+        return desktopfileCache[wclass];
+    }
+
+    // last resort open all files and search for title or class maybe cache desktop files
+
+    for (const auto& desktopFile : DesktopFiles)
+    {
+        AppEntry dF = parseDesktopFile(desktopFile);
+
+        for (AppInstance in : instances)
+        {
+            if (find_case_insensitive(dF.name, splitStr(in.title, " ")[0]))
+            {
+                desktopfileCache[wclass] = desktopFile;
+                return desktopfileCache[wclass];
+            }
+        }
+    }
+
+    return "";
 }
 
 bool getIfThisIsOnlyInstance()

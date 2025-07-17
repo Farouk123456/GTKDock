@@ -864,12 +864,12 @@ class Win : public Gtk::Window
                 label->add_css_class("applabel");
                 m_popover_box->append(*label);
                 
+                auto separator1 = Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::HORIZONTAL);
+                separator1->add_css_class("sepe");
+                m_popover_box->append(*separator1);
+                
                 if (e.count_instances > 0)
                 {
-                    auto separator1 = Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::HORIZONTAL);
-                    separator1->add_css_class("sepe");
-                    m_popover_box->append(*separator1);
-
                     for (AppInstance& instance : e.instances)
                     {
                         auto menubtn = Gtk::make_managed<Gtk::Button>();
@@ -912,7 +912,7 @@ class Win : public Gtk::Window
                         label->set_hexpand(true);
                         label->set_ellipsize(Pango::EllipsizeMode::END);
                         label->set_max_width_chars(20);
-                        label->set_halign(Gtk::Align::START);
+                        label->set_halign(Gtk::Align::CENTER);
                         
                         auto img = Gtk::make_managed<Gtk::Image>(Gio::Icon::create("pan-end-symbolic"));
                         img->set_halign(Gtk::Align::END);
