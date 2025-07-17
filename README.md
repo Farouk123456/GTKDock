@@ -7,7 +7,9 @@ Right now it works best on hyprland, it works on X11 but animations are choppy.
 
 If WM is wayland it has to support gtk-layer-shell
 
-![example image](https://github.com/user-attachments/assets/412293b9-2cc6-4e4b-afbe-db8c36df097e)
+<p align="center">
+  <img width="1920" height="1080" src="https://private-user-images.githubusercontent.com/60853263/466617425-412293b9-2cc6-4e4b-afbe-db8c36df097e.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NTI3ODAzOTgsIm5iZiI6MTc1Mjc4MDA5OCwicGF0aCI6Ii82MDg1MzI2My80NjY2MTc0MjUtNDEyMjkzYjktMmNjNi00ZTRiLWFmYmUtZGI4YzM2ZGYwOTdlLnBuZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNTA3MTclMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUwNzE3VDE5MjEzOFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWVlZWIyMzQyMjc0ZjY3MjM4Y2VjN2Q4YzM1OGZiZmM5MGY1OGQ2YWQ1OWE5NWVjNGUzZGQxM2YyMjBlMGMwYTMmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.qUCPL1tKN2P-x5wBBBMKEkMzj1Vi0AxSnpWvQjyVMzU">
+</p>
 
 <p align="center">
   <img width="623" height="312" src="https://github.com/user-attachments/assets/5b1ddcb1-9d7f-442f-a886-23d14b7b89da">
