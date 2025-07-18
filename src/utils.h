@@ -46,6 +46,15 @@ enum class DockEdge
     EDGEBOTTOM
 };
 
+enum class DockAlignment
+{
+    CENTER = 0,
+    LEFT,
+    TOP,
+    RIGHT,
+    BOTTOM
+};
+
 // utility functions
 
 // split string ex. "a-b-c-d" into {"a", "b", "c", "d"}

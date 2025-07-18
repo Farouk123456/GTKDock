@@ -30,7 +30,10 @@ Or (if ~/.config/GTKDock exists): `mv ./GTKDock ~/.local/bin/`
 
 ## Usage:
 
-`GTKDock -d[monIdx] -e[edgeIdx] (Dock Edge Possible values: 0 = left 1 = top 2 = right 3 = bottom)`
+`GTKDock -d[monIdx] -e[edgeIdx] -a[alignmentIdx]`
+
+(Dock Edge Possible values: 0 = left 1 = top 2 = right 3 = bottom)\
+(Dock Alignment Possible values: 0 = center 1 = left 2 = top 3 = right 4 = bottom)
 
 conf/pinnedApps stores the pinned Apps and their order in the Format
 
@@ -41,6 +44,9 @@ futher configuration is available in `conf/settings.conf`
 
 There are two ways of using GTKDock either leaving it in its Project Dir and linking to it\
 or moving config and imgs folders to ~/.config/GTKDock so one can use the executable anywhere
+
+-e Controlls which edge the dock sticks to and ianimates into (sildes in and out of)\
+-a Controlls the dock alignment on the display edge (ex. dock is on the bottom on the left or dock is on the left edge on the topside ...)
 
 ## Example:
 

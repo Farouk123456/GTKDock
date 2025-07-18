@@ -95,6 +95,8 @@ class Win : public Gtk::Window
             std::string launcher_cmd = "";
             bool isolated_to_monitor = false;
             DockEdge edge = DockEdge::EDGEBOTTOM;
+            DockAlignment alignment = DockAlignment::CENTER;
+
             std::vector <AppEntry> entries = {};
         } appCtx;
 
@@ -172,10 +174,31 @@ class Win : public Gtk::Window
                         int edgeIdx = std::stoi(((std::string)argv[i]).substr(2)) % 4;
                         if (edgeIdx >= 0 && edgeIdx < 4) appCtx.edge = (DockEdge)edgeIdx;
                     }
+                    if (argv[i][0] == '-' && argv[i][1] == 'a')
+                    {
+                        int alIdx = std::stoi(((std::string)argv[i]).substr(2)) % 5;
+                        if (alIdx >= 0 && alIdx < 5) appCtx.alignment = (DockAlignment)alIdx;
+                    }
                     if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)
                     {
                         std::cout << "GTKDock - Linux Application Dock\n\nUsage: GTKDock -d[monIdx] -e[edgeIdx]\n\n -d[monIdx]: ex. -d0\n -e[edgeIdx]: ex. -e3\n\nDock Edge Possible values: 0 = left 1 = top 2 = right 3 = bottom" << std::endl;
                         std::exit(0);
+                    }
+                }
+
+                if (appCtx.edge == DockEdge::EDGEBOTTOM || appCtx.edge == DockEdge::EDGETOP)
+                {
+                    if (appCtx.alignment == DockAlignment::BOTTOM || appCtx.alignment == DockAlignment::TOP)
+                    {
+                        std::cout << "\nWrong usage of alignment if Dock edge is Top or Bottom\nAlignment connot be Top or Bottom only Left Right and Center(default)" << std::endl;
+                        std::exit(0);   
+                    }
+                } else
+                {
+                    if (appCtx.alignment == DockAlignment::LEFT || appCtx.alignment == DockAlignment::RIGHT)
+                    {
+                        std::cout << "\nWrong usage of alignment if Dock edge is Left or Right\nAlignment connot be Right or Left only Top Bottom and Center(default)" << std::endl;
+                        std::exit(0);   
                     }
                 }
                 
@@ -214,7 +237,7 @@ class Win : public Gtk::Window
             // either use gtk-layer-shell protocol to put window on top or add hook to use x11 specific functions to do the same thing
             if (wayland)
             {    
-                GLS_setup_top_layer(this, appCtx.displayIdx, appCtx.edgeMargin, "GTKDock", appCtx.edge);
+                GLS_setup_top_layer(this, appCtx.displayIdx, appCtx.edgeMargin, "GTKDock", appCtx.edge, appCtx.alignment);
             } else
             {
                 signal_realize().connect(sigc::mem_fun(*this, &Win::on_realizeX));
@@ -1075,7 +1098,7 @@ class Win : public Gtk::Window
 
         void on_realizeX()
         {
-            onrealizeXDock(this, appCtx.displayIdx, appCtx.winW, appCtx.winH, appCtx.edgeMargin, appCtx.edge);
+            onrealizeXDock(this, appCtx.displayIdx, appCtx.winW, appCtx.winH, appCtx.edgeMargin, appCtx.edge, appCtx.alignment);
         }
 };
 
@@ -1106,7 +1129,7 @@ class Hotspot : public Gtk::Window
                 }
             }
             
-            GLS_setup_top_layer(this, mon, 0, "GTKDock", win->appCtx.edge);
+            GLS_setup_top_layer(this, mon, 0, "GTKDock", win->appCtx.edge, win->appCtx.alignment);
 
             auto motion = Gtk::EventControllerMotion::create();
 
