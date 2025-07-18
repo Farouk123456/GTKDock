@@ -103,6 +103,15 @@ adds buttons to the context menu of an instance that can do arbitrary functional
 for example toggle floating on hyprland
 
 ## Cutomization
-launcher.png is used for the launcher button and style.css is used to style all the elements in the Dock.
+imgs/launcher.png is used for the launcher button and conf/style.css is used to style all the elements in the Dock.\
+conf/settings.conf controlls:
+1. icon size
+2. padding
+3. hotspot height i. e. region that activates the dock
+4. auto hide toimeout (time to wait before hiding dick) and duration (of animation)
+5. to draw launcher btn or not
+6. margin from screen edge
+7. cmd to be executed when launcher btn is pressed
+8. if dock is isolated to the apps running in its monitor or whether it should show windows on all screens
 
 You might want to use GTK_DEBUG=interactive to help with customization :)
