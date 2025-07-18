@@ -181,7 +181,7 @@ class Win : public Gtk::Window
                     }
                     if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)
                     {
-                        std::cout << "GTKDock - Linux Application Dock\n\nUsage: GTKDock -d[monIdx] -e[edgeIdx]\n\n -d[monIdx]: ex. -d0\n -e[edgeIdx]: ex. -e3\n\nDock Edge Possible values: 0 = left 1 = top 2 = right 3 = bottom" << std::endl;
+                        std::cout << "GTKDock - Linux Application Dock\n\nUsage: GTKDock -d[monIdx] -e[edgeIdx] -a[alignmentIdx]\n\n -d[monIdx]: ex. -d0\n -e[edgeIdx]: ex. -e3\n -a[alignmentIdx]: ex. -a3\n\nDock Edge Possible values: 0 = left 1 = top 2 = right 3 = bottom\nDock Alignment Possible values: 0 = center 1 = left 2 = top 3 = right 4 = bottom" << std::endl;
                         std::exit(0);
                     }
                 }
@@ -1109,7 +1109,7 @@ class Win : public Gtk::Window
 
 class Hotspot : public Gtk::Window 
 {
-    int mon = -1;
+    int mon = 0;
     Win * win = nullptr;
     double last_x = 0;
     double last_y = 0;
