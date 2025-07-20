@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/GTKDock",
-            "args": ["-d0"],
+            "args": ["-d0", "-e0", "-a2"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],// {"name": "XDG_SESSION_TYPE", "value": "x11"}],

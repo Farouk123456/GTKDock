@@ -20,7 +20,7 @@
 
 void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin, DockEdge edge, DockAlignment alignment);
 
-void GLS_setup_top_layer(Gtk::Window * win, int dispIdx, int edgeMargin, const std::string& name, DockEdge edge, DockAlignment alignment);
+void GLS_setup_top_layer(Gtk::Window * win, int dispIdx, int edgeMargin, const std::string& name, DockEdge edge, DockAlignment alignment, bool exclusive, int winW, int winH);
 
 void GLS_chngMargin(Gtk::Window * win, int newMargin, DockEdge edge);
 

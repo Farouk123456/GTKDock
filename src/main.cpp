@@ -94,10 +94,11 @@ class Win : public Gtk::Window
             bool autohide = false;
             std::string launcher_cmd = "";
             bool isolated_to_monitor = false;
+            bool exclusiveMode = false;
             DockEdge edge = DockEdge::EDGEBOTTOM;
             DockAlignment alignment = DockAlignment::CENTER;
-
             std::vector <AppEntry> entries = {};
+            
         } appCtx;
 
         // State Machine for animating the Dock to reduce buggy behaviour
@@ -150,6 +151,10 @@ class Win : public Gtk::Window
                         } else if (values[0] == "isolated_to_monitor")
                         {
                             appCtx.isolated_to_monitor = (bool)std::stoi(values[1]);
+                        } else if (values[0] == "exclusive_mode")
+                        {
+                            appCtx.exclusiveMode = (bool)std::stoi(values[1]);
+                            if (appCtx.exclusiveMode) appCtx.autohide = false;
                         }
                     }
                 }
@@ -232,12 +237,22 @@ class Win : public Gtk::Window
                     appCtx.winW = wH;
                     appCtx.winH = wW;
                 }
+
+                if(appCtx.exclusiveMode)
+                {
+                    GdkMonitor * monitor = GDK_MONITOR((Gdk::Display::get_default()->get_monitors()->get_object(appCtx.displayIdx))->gobj());
+                    
+                    GdkRectangle g;
+                    gdk_monitor_get_geometry(monitor, &g);
+                    if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT) appCtx.winH = g.height;
+                    else appCtx.winW = g.width;
+                }
             }
 
             // either use gtk-layer-shell protocol to put window on top or add hook to use x11 specific functions to do the same thing
             if (wayland)
             {    
-                GLS_setup_top_layer(this, appCtx.displayIdx, appCtx.edgeMargin, "GTKDock", appCtx.edge, appCtx.alignment);
+                GLS_setup_top_layer(this, appCtx.displayIdx, appCtx.edgeMargin, "GTKDock", appCtx.edge, appCtx.alignment, appCtx.exclusiveMode, appCtx.winW, appCtx.winH);
             } else
             {
                 signal_realize().connect(sigc::mem_fun(*this, &Win::on_realizeX));
@@ -371,72 +386,79 @@ class Win : public Gtk::Window
 
                 appCtx.entries = newEntries;
 
-                if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT)
+                if (!appCtx.exclusiveMode)
                 {
-                    appCtx.dockH = (appCtx.entries.size()) * (appCtx.icon_bg_size + appCtx.padding);
-                    
-                    bool sep = false;
-                    for (AppEntry& e : appCtx.entries)
+                    if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT)
                     {
-                        if (e.name == "line")
+                        appCtx.dockH = (appCtx.entries.size()) * (appCtx.icon_bg_size + appCtx.padding);
+                        
+                        bool sep = false;
+                        for (AppEntry& e : appCtx.entries)
                         {
-                            sep = true;
-                            break;
+                            if (e.name == "line")
+                            {
+                                sep = true;
+                                break;
+                            }
                         }
+
+                        if (sep) appCtx.dockH -= appCtx.icon_bg_size + appCtx.padding - 6;
+
+                        appCtx.winH = appCtx.dockH + appCtx.padding;
+                    }
+                    else
+                    {
+                        appCtx.dockW = (appCtx.entries.size()) * (appCtx.icon_bg_size + appCtx.padding);
+                        
+                        bool sep = false;
+                        for (AppEntry& e : appCtx.entries)
+                        {
+                            if (e.name == "line")
+                            {
+                                sep = true;
+                                break;
+                            }
+                        }
+
+                        if (sep) appCtx.dockW -= appCtx.icon_bg_size + appCtx.padding - 6;
+
+                        appCtx.winW = appCtx.dockW + appCtx.padding;
                     }
 
-                    if (sep) appCtx.dockH -= appCtx.icon_bg_size + appCtx.padding - 6;
-
-                    appCtx.winH = appCtx.dockH + appCtx.padding;
+                    this->set_default_size(appCtx.winW, appCtx.winH);
                 }
-                else
-                {
-                    appCtx.dockW = (appCtx.entries.size()) * (appCtx.icon_bg_size + appCtx.padding);
-                    
-                    bool sep = false;
-                    for (AppEntry& e : appCtx.entries)
-                    {
-                        if (e.name == "line")
-                        {
-                            sep = true;
-                            break;
-                        }
-                    }
-
-                    if (sep) appCtx.dockW -= appCtx.icon_bg_size + appCtx.padding - 6;
-
-                    appCtx.winW = appCtx.dockW + appCtx.padding;
-                }
-
-                this->set_default_size(appCtx.winW, appCtx.winH);
 
                 buildDock();
 
-                Glib::signal_timeout().connect([this]() {
-                    if (state == Win::DockState::Visible)
-                    {
-                        timeWhenMouseLeftDock = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count();
-                        wanted_state = Win::DockState::Hidden;
-                        return false;
-                    }
-                    
-                    return true;  // Keep the timer running
-                }, 250);  // Update every 1 second
+                if (!appCtx.exclusiveMode)
+                {
+                    Glib::signal_timeout().connect([this]() {
+                        if (state == Win::DockState::Visible)
+                        {
+                            timeWhenMouseLeftDock = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count();
+                            wanted_state = Win::DockState::Hidden;
+                            return false;
+                        }
+                        
+                        return true;  // Keep the timer running
+                    }, 250);  // Update every 1 second
+                }
             }
         }
 
         // builds the Dock
         void buildDock()
         {
-            dock_box = Gtk::Fixed();
             container = Gtk::Fixed();
+            dock_box = Gtk::Fixed();
+
+            container.get_style_context()->add_class("container");
             dock_box.get_style_context()->add_class("dock");
 
             if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT)
             {
-                GdkRectangle dock = {(int)((appCtx.winW - appCtx.dockW) * 0.5), (int)((appCtx.winH - appCtx.dockH) * 0.5), appCtx.dockW, appCtx.dockH};
-                double sx = dock.x;
-                double sy = dock.y;
+                double sx = 0;
+                double sy = 0;
                 double sl = appCtx.icon_bg_size;
                 
                 auto settings = Gtk::Settings::get_default();
@@ -553,9 +575,8 @@ class Win : public Gtk::Window
             }
             else
             {
-                GdkRectangle dock = {(int)((appCtx.winW - appCtx.dockW) * 0.5), (int)((appCtx.winH - appCtx.dockH) * 0.5), appCtx.dockW, appCtx.dockH};
-                double sx = dock.x;
-                double sy = dock.y;
+                double sx = 0;
+                double sy = 0;
                 double sl = appCtx.icon_bg_size;
                 
                 auto settings = Gtk::Settings::get_default();
@@ -671,7 +692,30 @@ class Win : public Gtk::Window
                 }
             }
         
-            container.put(dock_box, 0, 0);
+            if (appCtx.exclusiveMode)
+            {
+                if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT)
+                {
+                    if (appCtx.alignment == DockAlignment::CENTER)
+                        container.put(dock_box, appCtx.padding, appCtx.padding + (appCtx.winH - appCtx.dockH) * 0.5);
+                    else if (appCtx.alignment == DockAlignment::TOP)
+                        container.put(dock_box, appCtx.padding, appCtx.padding );
+                    else if (appCtx.alignment == DockAlignment::BOTTOM)
+                        container.put(dock_box, appCtx.padding, appCtx.winH - appCtx.dockH - appCtx.padding );
+                } else
+                {
+                    if (appCtx.alignment == DockAlignment::CENTER)
+                        container.put(dock_box, appCtx.padding + (appCtx.winW - appCtx.dockW) * 0.5, appCtx.padding);
+                    else if (appCtx.alignment == DockAlignment::LEFT)
+                        container.put(dock_box, appCtx.padding, appCtx.padding);
+                    else if (appCtx.alignment == DockAlignment::RIGHT)
+                        container.put(dock_box, appCtx.winW - appCtx.dockW, appCtx.padding);
+                }
+            } else
+            {
+                container.put(dock_box, appCtx.padding, appCtx.padding);
+            }
+
             set_child(container);
         }
 
@@ -1129,7 +1173,7 @@ class Hotspot : public Gtk::Window
                 }
             }
             
-            GLS_setup_top_layer(this, mon, 0, "GTKDock", win->appCtx.edge, win->appCtx.alignment);
+            GLS_setup_top_layer(this, mon, 0, "GTKDock", win->appCtx.edge, win->appCtx.alignment, false, 0,0);
 
             auto motion = Gtk::EventControllerMotion::create();
 
