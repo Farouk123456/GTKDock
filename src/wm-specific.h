@@ -18,7 +18,7 @@
 #include <gtkmm-4.0/gtkmm.h>
 #include "utils.h"
 
-void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin, DockEdge edge, DockAlignment alignment);
+void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin, DockEdge edge, DockAlignment alignment, bool exclusive);
 
 void GLS_setup_top_layer(Gtk::Window * win, int dispIdx, int edgeMargin, const std::string& name, DockEdge edge, DockAlignment alignment, bool exclusive, int winW, int winH);
 

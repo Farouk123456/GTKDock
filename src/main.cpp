@@ -251,12 +251,13 @@ class Win : public Gtk::Window
 
             // either use gtk-layer-shell protocol to put window on top or add hook to use x11 specific functions to do the same thing
             if (wayland)
-            {    
+            {
                 GLS_setup_top_layer(this, appCtx.displayIdx, appCtx.edgeMargin, "GTKDock", appCtx.edge, appCtx.alignment, appCtx.exclusiveMode, appCtx.winW, appCtx.winH);
             } else
             {
                 signal_realize().connect(sigc::mem_fun(*this, &Win::on_realizeX));
             }
+
                 
             set_default_size(appCtx.winW, appCtx.winH);
             set_title("GTKDock");
@@ -1142,7 +1143,7 @@ class Win : public Gtk::Window
 
         void on_realizeX()
         {
-            onrealizeXDock(this, appCtx.displayIdx, appCtx.winW, appCtx.winH, appCtx.edgeMargin, appCtx.edge, appCtx.alignment);
+            onrealizeXDock(this, appCtx.displayIdx, appCtx.winW, appCtx.winH, appCtx.edgeMargin, appCtx.edge, appCtx.alignment, appCtx.exclusiveMode);
         }
 };
 

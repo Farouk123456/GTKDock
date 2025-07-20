@@ -13,7 +13,25 @@ bool check_layer_shell_support()
     return supported;
 }
 
-void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin, DockEdge edge, DockAlignment alignment, bool exclusive, int winW, int winH)
+void reserve_space(Display* display, Window window, int width, int height)
+{
+    Atom net_wm_strut = XInternAtom(display, "_NET_WM_STRUT", False);
+    Atom net_wm_strut_partial = XInternAtom(display, "_NET_WM_STRUT_PARTIAL", False);
+    
+    unsigned long strut[12] = {0};
+    // Example: reserve space at the bottom of the screen
+    strut[2] = height; // bottom size
+    strut[8] = 0;      // bottom start x
+    strut[9] = width;  // bottom end x
+    
+    XChangeProperty(display, window, net_wm_strut, XA_CARDINAL, 32,
+                   PropModeReplace, (unsigned char*)strut, 4);
+    
+    XChangeProperty(display, window, net_wm_strut_partial, XA_CARDINAL, 32,
+                   PropModeReplace, (unsigned char*)strut, 12);
+}
+
+void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin, DockEdge edge, DockAlignment alignment, bool exclusive)
 {
     Display * disp = XOpenDisplay(0);
     unsigned long x_window = gdk_x11_surface_get_xid(GDK_SURFACE(win->get_surface()->gobj()));
@@ -36,55 +54,82 @@ void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edge
 
     XChangeWindowAttributes(disp, x_window, CWOverrideRedirect, &swa);
 
+    reserve_space(disp, x_window, 50, 1080);
+
     GdkMonitor * monitor = GDK_MONITOR((Gdk::Display::get_default()->get_monitors()->get_object(dispIdx))->gobj());
     
     GdkRectangle g;
     gdk_monitor_get_geometry(monitor, &g);
     int x, y = 0;
 
-    if (edge == DockEdge::EDGELEFT)
+    if (!exclusive)
     {
-        x = g.x + edgeMargin;
-        
-        if (alignment == DockAlignment::CENTER)
-            y = g.y + (g.height - winH) / 2;
-        else if (alignment == DockAlignment::TOP)
-            y = g.y;
-        else if (alignment == DockAlignment::BOTTOM)
-            y = g.y + (g.height - winH);
-    }
-    else if (edge == DockEdge::EDGETOP)
-    {
-        y = g.y + edgeMargin;
+        if (edge == DockEdge::EDGELEFT)
+        {
+            x = g.x + edgeMargin;
 
-        if (alignment == DockAlignment::CENTER)
-            x = g.x + (g.width - winW) / 2;
-        else if (alignment == DockAlignment::LEFT)
-            x = g.x;
-        else if (alignment == DockAlignment::RIGHT)
-            x = g.x + (g.width - winW);
-    }
-    else if (edge == DockEdge::EDGERIGHT)
-    {
-        x = g.x + g.width - edgeMargin - winW;
-        
-        if (alignment == DockAlignment::CENTER)
-            y = g.y + (g.height - winH) / 2;
-        else if (alignment == DockAlignment::TOP)
-            y = g.y;
-        else if (alignment == DockAlignment::BOTTOM)
-            y = g.y + (g.height - winH);
-    }
-    else if (edge == DockEdge::EDGEBOTTOM)
-    {
-        y = g.y + g.height - winH - edgeMargin;
+            if (alignment == DockAlignment::CENTER)
+                y = g.y + (g.height - winH) / 2;
+            else if (alignment == DockAlignment::TOP)
+                y = g.y;
+            else if (alignment == DockAlignment::BOTTOM)
+                y = g.y + (g.height - winH);
+        }
+        else if (edge == DockEdge::EDGETOP)
+        {
+            y = g.y + edgeMargin;
 
-        if (alignment == DockAlignment::CENTER)
-            x = g.x + (g.width - winW) / 2;
-        else if (alignment == DockAlignment::LEFT)
+            if (alignment == DockAlignment::CENTER)
+                x = g.x + (g.width - winW) / 2;
+            else if (alignment == DockAlignment::LEFT)
+                x = g.x;
+            else if (alignment == DockAlignment::RIGHT)
+                x = g.x + (g.width - winW);
+        }
+        else if (edge == DockEdge::EDGERIGHT)
+        {
+            x = g.x + g.width - edgeMargin - winW;
+
+            if (alignment == DockAlignment::CENTER)
+                y = g.y + (g.height - winH) / 2;
+            else if (alignment == DockAlignment::TOP)
+                y = g.y;
+            else if (alignment == DockAlignment::BOTTOM)
+                y = g.y + (g.height - winH);
+        }
+        else if (edge == DockEdge::EDGEBOTTOM)
+        {
+            y = g.y + g.height - winH - edgeMargin;
+
+            if (alignment == DockAlignment::CENTER)
+                x = g.x + (g.width - winW) / 2;
+            else if (alignment == DockAlignment::LEFT)
+                x = g.x;
+            else if (alignment == DockAlignment::RIGHT)
+                x = g.x + (g.width - winW);
+        }
+    } else
+    {
+        if (edge == DockEdge::EDGELEFT)
+        {
             x = g.x;
-        else if (alignment == DockAlignment::RIGHT)
+            y = g.y;
+        }
+        else if (edge == DockEdge::EDGETOP)
+        {
+            x = g.x;
+            y = g.y;
+        }
+        else if (edge == DockEdge::EDGERIGHT)
+        {
             x = g.x + (g.width - winW);
+            y = g.y;
+        }
+        else if (edge == DockEdge::EDGEBOTTOM)
+        {
+            x = g.x;
+            y = g.y + (g.height - winH);
+        }
     }
 
     XMoveWindow(disp, x_window, x,y);
@@ -99,7 +144,7 @@ void GLS_setup_top_layer(Gtk::Window * win, int dispIdx, int edgeMargin, const s
     gtk_layer_init_for_window(GTK_WINDOW(win->gobj()));
     gtk_layer_set_anchor(GTK_WINDOW(win->gobj()), ed, true);
     
-    //gtk_layer_set_anchor(GTK_WINDOW(win->gobj()), GTK_LAYER_SHELL_EDGE_TOP, true);
+    gtk_layer_set_anchor(GTK_WINDOW(win->gobj()), GTK_LAYER_SHELL_EDGE_TOP, true);
     if (exclusive) gtk_layer_auto_exclusive_zone_enable(GTK_WINDOW(win->gobj()));
 
     if (!exclusive)
