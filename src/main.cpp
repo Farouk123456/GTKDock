@@ -98,7 +98,10 @@ class Win : public Gtk::Window
             DockEdge edge = DockEdge::EDGEBOTTOM;
             DockAlignment alignment = DockAlignment::CENTER;
             std::vector <AppEntry> entries = {};
-            
+            int offset_width = 0;
+            int offset_height = 0;
+            bool set_height = false;
+            bool set_width = false;
         } appCtx;
 
         // State Machine for animating the Dock to reduce buggy behaviour
@@ -156,10 +159,44 @@ class Win : public Gtk::Window
                             appCtx.exclusiveMode = (bool)std::stoi(values[1]);
                             if (appCtx.exclusiveMode) appCtx.autohide = false;
                         }
+                        else if (values[0] == "hotfix_height")
+                        {
+                            if (values[1][0] == 's')
+                            {
+                                appCtx.set_height = true;
+                                appCtx.offset_height = std::stoi(values[1].substr(1));
+                            } else if (values[1][0] == '+')
+                            {
+                                appCtx.offset_height = std::stoi(values[1].substr(1));
+                            } else if (values[1][0] == '-')
+                            {
+                                appCtx.offset_height = -std::stoi(values[1].substr(1));
+                            }
+                        }
+                        else if (values[0] == "hotfix_width")
+                        {
+                            if (values[1][0] == 's')
+                            {
+                                appCtx.set_width = true;
+                                appCtx.offset_width = std::stoi(values[1].substr(1));
+                            } else if (values[1][0] == '+')
+                            {
+                                appCtx.offset_width = std::stoi(values[1].substr(1));
+                            } else if (values[1][0] == '-')
+                            {
+                                appCtx.offset_width = -std::stoi(values[1].substr(1));
+                            }
+                        }
                     }
                 }
 
                 conf.close();
+
+                if (appCtx.exclusiveMode && !wayland)
+                {
+                    std::cout << "exclusive mode is wayland only." << std::endl;
+                    std::exit(0);
+                }
 
                 appCtx.icon_bg_size = appCtx.icon_size * (4.f/3.f);
                 appCtx.winH = appCtx.icon_bg_size + 2 * appCtx.padding;
@@ -244,10 +281,20 @@ class Win : public Gtk::Window
                     
                     GdkRectangle g;
                     gdk_monitor_get_geometry(monitor, &g);
-                    if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT) appCtx.winH = g.height;
-                    else appCtx.winW = g.width;
+
+                    if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT)
+                    {
+                        appCtx.winH = g.height;
+                    }
+                    else
+                    {
+                        appCtx.winW = g.width;
+                    }
                 }
             }
+
+            if(appCtx.exclusiveMode) appCtx.winH = (appCtx.set_height) ? appCtx.offset_height : appCtx.winH + appCtx.offset_height;
+            if (appCtx.exclusiveMode) appCtx.winW = (appCtx.set_width) ? appCtx.offset_width : appCtx.winW + appCtx.offset_width;
 
             // either use gtk-layer-shell protocol to put window on top or add hook to use x11 specific functions to do the same thing
             if (wayland)
@@ -335,6 +382,8 @@ class Win : public Gtk::Window
                         if (!animateIn( frame_time_ms / appCtx.duration )) this->state = Win::DockState::Visible;
                     }
 
+                    appCtx.winW = this->get_size(Gtk::Orientation::HORIZONTAL);
+                    appCtx.winH = this->get_size(Gtk::Orientation::VERTICAL);
                     return true;
                 });
             }
@@ -444,6 +493,9 @@ class Win : public Gtk::Window
                         return true;  // Keep the timer running
                     }, 250);  // Update every 1 second
                 }
+
+                appCtx.winW = this->get_size(Gtk::Orientation::HORIZONTAL);
+                appCtx.winH = this->get_size(Gtk::Orientation::VERTICAL);
             }
         }
 
@@ -714,7 +766,7 @@ class Win : public Gtk::Window
                 }
             } else
             {
-                container.put(dock_box, appCtx.padding, appCtx.padding);
+                container.put(dock_box, appCtx.padding, appCtx.padding * 0.5);
             }
 
             set_child(container);
