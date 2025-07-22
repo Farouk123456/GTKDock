@@ -12,6 +12,10 @@ If WM is wayland it has to support gtk-layer-shell
 </p>
 
 <p align="center">
+  <img width="1920" height="1080" src="https://github.com/user-attachments/assets/a2b1176d-7cbc-4368-975d-f2fb46daa9e0">
+</p>
+
+<p align="center">
   <img width="623" height="312" src="https://github.com/user-attachments/assets/5b1ddcb1-9d7f-442f-a886-23d14b7b89da">
 </p>
 
@@ -45,12 +49,13 @@ futher configuration is available in `conf/settings.conf`
 There are two ways of using GTKDock either leaving it in its Project Dir and linking to it\
 or moving config and imgs folders to ~/.config/GTKDock so one can use the executable anywhere
 
+-d Controlls which monitor the dock gets created on and controlls (if isolated_to_monitor is 1)\
 -e Controlls which edge the dock sticks to and ianimates into (sildes in and out of)\
 -a Controlls the dock alignment on the display edge (ex. dock is on the bottom on the left or dock is on the left edge on the topside ...)
 
 ## Example:
 
-`./GTKDock -d1 -e3`
+`./GTKDock -d1 -e3 -a0`
 
 ## WM Support and Compatibility
 GTKDock has been tested on Hyprland and GNOME on Xorg
@@ -119,5 +124,7 @@ conf/settings.conf controlls:
 6. margin from screen edge
 7. cmd to be executed when launcher btn is pressed
 8. if dock is isolated to the apps running in its monitor or whether it should show windows on all screens
+9. exclusive mode creates a zone where only the dock exists (this is a wayland only feature)
+10. hotfix_height and hotfix_width is a little fix for compatibility with other topbars / exclusive zone windows that may exist
 
 You might want to use GTK_DEBUG=interactive to help with customization :)
