@@ -1186,7 +1186,7 @@ class Win : public Gtk::Window
             if (appCtx.drawLauncher)
             {
                 entries.push_back( {
-                    0, true, "Launcher", appCtx.launcher_cmd, "imgs/launcher.png"
+                    0, true, "Launcher", appCtx.launcher_cmd, getRes("imgs/launcher.png")
                 } );
             }
 
