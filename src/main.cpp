@@ -429,9 +429,9 @@ class Win : public Gtk::Window
                 cleanupDock();
  
                 // Only rebuild if entries changed
-                for (auto child : dock_box.get_children())
+                for (auto child : dock_box->get_children())
                 {
-                    dock_box.remove(*child);  // Remove all children
+                    dock_box->remove(*child);  // Remove all children
                 }
 
                 appCtx.entries = newEntries;
@@ -502,11 +502,11 @@ class Win : public Gtk::Window
         // builds the Dock
         void buildDock()
         {
-            container = Gtk::Fixed();
-            dock_box = Gtk::Fixed();
+            container = Gtk::make_managed<Gtk::Fixed>();
+            dock_box = Gtk::make_managed<Gtk::Fixed>();
 
-            container.get_style_context()->add_class("container");
-            dock_box.get_style_context()->add_class("dock");
+            container->get_style_context()->add_class("container");
+            dock_box->get_style_context()->add_class("dock");
 
             if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT)
             {
@@ -750,26 +750,26 @@ class Win : public Gtk::Window
                 if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT)
                 {
                     if (appCtx.alignment == DockAlignment::CENTER)
-                        container.put(dock_box, appCtx.padding, appCtx.padding + (appCtx.winH - appCtx.dockH) * 0.5);
+                        container->put(*dock_box, appCtx.padding, appCtx.padding + (appCtx.winH - appCtx.dockH) * 0.5);
                     else if (appCtx.alignment == DockAlignment::TOP)
-                        container.put(dock_box, appCtx.padding, appCtx.padding );
+                        container->put(*dock_box, appCtx.padding, appCtx.padding );
                     else if (appCtx.alignment == DockAlignment::BOTTOM)
-                        container.put(dock_box, appCtx.padding, appCtx.winH - appCtx.dockH - appCtx.padding );
+                        container->put(*dock_box, appCtx.padding, appCtx.winH - appCtx.dockH - appCtx.padding );
                 } else
                 {
                     if (appCtx.alignment == DockAlignment::CENTER)
-                        container.put(dock_box, appCtx.padding + (appCtx.winW - appCtx.dockW) * 0.5, appCtx.padding);
+                        container->put(*dock_box, appCtx.padding + (appCtx.winW - appCtx.dockW) * 0.5, appCtx.padding);
                     else if (appCtx.alignment == DockAlignment::LEFT)
-                        container.put(dock_box, appCtx.padding, appCtx.padding);
+                        container->put(*dock_box, appCtx.padding, appCtx.padding);
                     else if (appCtx.alignment == DockAlignment::RIGHT)
-                        container.put(dock_box, appCtx.winW - appCtx.dockW, appCtx.padding);
+                        container->put(*dock_box, appCtx.winW - appCtx.dockW, appCtx.padding);
                 }
             } else
             {
-                container.put(dock_box, appCtx.padding, appCtx.padding * 0.5);
+                container->put(*dock_box, appCtx.padding, appCtx.padding * 0.5);
             }
 
-            set_child(container);
+            set_child(*container);
         }
 
         // cleans up docks widgets and their children and handles popovers
@@ -792,22 +792,22 @@ class Win : public Gtk::Window
             widget_positions.clear();
             
             // Now safely remove all children
-            while (auto* child = dock_box.get_first_child()) {
-                dock_box.remove(*child);
+            while (auto* child = dock_box->get_first_child()) {
+                dock_box->remove(*child);
             }
         }
 
         void add_widget_to_dock_box(Gtk::Widget& w, double x, double y)
         {
-            dock_box.put(w, x, y);
+            dock_box->put(w, x, y);
             widget_positions.push_back({x,y});
         }
 
         std::vector<Gtk::Popover *> popovers;
         std::vector<Gtk::Popover *> popoversofpopovers;
 
-        Gtk::Fixed dock_box;
-        Gtk::Fixed container;
+        Gtk::Fixed * dock_box;
+        Gtk::Fixed * container;
         float t1 = 0;
         float t2 = 0;
 
@@ -820,18 +820,18 @@ class Win : public Gtk::Window
         {
             if (appCtx.edge == DockEdge::EDGEBOTTOM)
             {
-                container.move(dock_box, 0, offset_y);   
+                container->move(*dock_box, 0, offset_y);   
             }
             else if (appCtx.edge == DockEdge::EDGETOP)
             {
-                container.move(dock_box, 0, -offset_y);   
+                container->move(*dock_box, 0, -offset_y);   
             }
             else if (appCtx.edge == DockEdge::EDGELEFT)
             {
-                container.move(dock_box, -offset_y, 0);   
+                container->move(*dock_box, -offset_y, 0);   
             } else
             {
-                container.move(dock_box, offset_y, 0);    
+                container->move(*dock_box, offset_y, 0);    
             }
         }
         
