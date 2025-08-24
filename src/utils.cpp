@@ -252,8 +252,12 @@ std::vector<AppInstance> getRunningInstances()
             }
             
             inst.push_back( { std::stoi(s[0]), s[1], s[2], (bool)std::stoi(s[3]), std::stoi(s[4]) } );
+            free(buffer);
         }
     } catch (...) {
+        if (buffer != NULL)
+            free(buffer);
+        
         pclose(pipe);
         throw;
     }

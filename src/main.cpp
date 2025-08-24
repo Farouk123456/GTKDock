@@ -427,12 +427,6 @@ class Win : public Gtk::Window
             {
                 if (newEntries.size() != appCtx.entries.size()) wanted_state = Win::DockState::Visible;
                 cleanupDock();
- 
-                // Only rebuild if entries changed
-                for (auto child : dock_box->get_children())
-                {
-                    dock_box->remove(*child);  // Remove all children
-                }
 
                 appCtx.entries = newEntries;
 
@@ -507,7 +501,8 @@ class Win : public Gtk::Window
 
             container->get_style_context()->add_class("container");
             dock_box->get_style_context()->add_class("dock");
-
+            
+            
             if (appCtx.edge == DockEdge::EDGELEFT || appCtx.edge == DockEdge::EDGERIGHT)
             {
                 double sx = 0;
@@ -768,33 +763,35 @@ class Win : public Gtk::Window
             {
                 container->put(*dock_box, appCtx.padding, appCtx.padding * 0.5);
             }
-
+            
             set_child(*container);
         }
 
         // cleans up docks widgets and their children and handles popovers
-        void cleanupDock() {
-            // Unparent all popovers first
+        void cleanupDock() 
+        {
             for (auto* popover : popoversofpopovers) {
-                if (popover->get_parent()) {
-                    popover->unparent();
+                if (popover) {
+                    if (popover->get_parent()) {
+                        popover->unparent();
+                    }
                 }
             }
             popoversofpopovers.clear();
 
             for (auto* popover : popovers) {
-                if (popover->get_parent()) {
-                    popover->unparent();
+                if (popover) {
+                    if (popover->get_parent()) {
+                        popover->unparent();
+                    }
                 }
             }
-
             popovers.clear();
             widget_positions.clear();
             
             // Now safely remove all children
-            while (auto* child = dock_box->get_first_child()) {
-                dock_box->remove(*child);
-            }
+            //auto children = dock_box->get_children();
+            //for (auto* child : children) dock_box->remove(*child);
         }
 
         void add_widget_to_dock_box(Gtk::Widget& w, double x, double y)
