@@ -119,7 +119,7 @@ conf/settings.conf controlls:
 1. icon size
 2. padding
 3. hotspot height i. e. region that activates the dock
-4. auto hide toimeout (time to wait before hiding dick) and duration (of animation)
+4. auto hide timeout (time to wait before hiding dock) and duration (of animation)
 5. to draw launcher btn or not
 6. margin from screen edge
 7. cmd to be executed when launcher btn is pressed
