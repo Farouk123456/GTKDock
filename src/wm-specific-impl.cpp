@@ -190,7 +190,7 @@ void populateInstanceMenuWithWMSpecific(Gtk::Box* popover_box, AppInstance inst)
         auto button2 = Gtk::make_managed<Gtk::Button>("Toggle Floating");
         
         button2->signal_clicked().connect([inst](){
-            std::system(("hyprctl dispatch togglefloating \"title:" + inst.title + "\" &").c_str());
+            std::system(("hyprctl dispatch togglefloating \"pid:" + std::to_string(inst.pid) + "\" &").c_str());
         });
 
         button2->add_css_class("mbutton");
