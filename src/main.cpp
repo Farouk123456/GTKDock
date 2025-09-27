@@ -567,7 +567,7 @@ class Win : public Gtk::Window
                         add_widget_to_dock_box(*btn, sx, sy);
 
                         auto img = Gtk::make_managed<Gtk::Image>(appCtx.entries[i].iconPath);
-                        img->set_size_request(appCtx.icon_size,appCtx.icon_size);
+                        img->set_pixel_size(appCtx.icon_size);
                         img->set_can_target(false);
 
                         add_widget_to_dock_box(*img, ssx, ssy);
@@ -685,7 +685,7 @@ class Win : public Gtk::Window
                         add_widget_to_dock_box(*btn, sx, sy);
 
                         auto img = Gtk::make_managed<Gtk::Image>(appCtx.entries[i].iconPath);
-                        img->set_size_request(appCtx.icon_size,appCtx.icon_size);
+                        img->set_pixel_size(appCtx.icon_size);
                         img->set_can_target(false);
 
                         add_widget_to_dock_box(*img, ssx, ssy);
