@@ -6,7 +6,7 @@ button {
     color : #fff;
 }
 
-window {
+window .container .fullscreen {
     background: #00000000;
 }
 

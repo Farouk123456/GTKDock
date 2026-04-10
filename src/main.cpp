@@ -309,6 +309,9 @@ class Win : public Gtk::Window
             set_default_size(appCtx.winW, appCtx.winH);
             set_title("GTKDock");
 
+            set_decorated(false);
+            set_opacity(1.0);
+
             // populate Dock with widgets
             buildDock();
 
@@ -1326,9 +1329,10 @@ int main (int argc, char **argv)
         auto win = Gtk::make_managed<Win>(argc, argv);
         
         Glib::RefPtr<Gtk::CssProvider> css_provider = Gtk::CssProvider::create();
+        std::cout << getRes("conf/style.css") << std::endl;
         css_provider->load_from_path(getRes("conf/style.css"));
             
-        win->get_style_context()->add_provider_for_display(Gdk::Display::get_default(), css_provider, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        Gtk::StyleProvider::add_provider_for_display(Gdk::Display::get_default(), css_provider, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         
         app->add_window(*win);
         win->present();

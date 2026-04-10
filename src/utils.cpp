@@ -94,16 +94,13 @@ std::string cleanExecCommand(const std::string& cmd) {
 }
 
 std::string findIconPath(const std::string& iconName) {
-    // Check if it's already an absolute path
-    if (std::filesystem::exists(iconName)) {
-        return iconName;
-    }
-
     // Try theme icons first
     try {
         auto iconTheme = Gtk::IconTheme::get_for_display(Gdk::Display::get_default());
         auto iconInfo = iconTheme->lookup_icon(iconName, 48);
-        return iconInfo->get_file()->get_path();
+        auto ret = iconInfo->get_file()->get_path();
+        if (std::filesystem::exists(ret))
+            return ret;
     } catch (...) {
         // Fallback to common paths
         std::vector<std::string> extensions = {".png", ".svg", ".xpm"};
@@ -126,6 +123,12 @@ std::string findIconPath(const std::string& iconName) {
             }
         }
     }
+
+    if (std::filesystem::exists(iconName)) {
+        return iconName;
+    }
+
+    std::cout << "Couldn't find: " << iconName << std::endl;
     return "";
 }
 
@@ -162,6 +165,7 @@ AppEntry parseDesktopFile(const std::filesystem::path& desktopFile) {
             entry.execCmd = cleanExecCommand(value);
         } else if (key == "Icon") {
             entry.iconPath = findIconPath(value);
+            //std::cout << "Found: " << entry.iconPath << std::endl;
         }
     }
     

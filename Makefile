@@ -9,7 +9,7 @@ FLAGS = -std=gnu++20 -g `pkg-config --cflags --libs freetype2 gtkmm-4.0 gtk4-lay
 SRC = $(wildcard src/*.cpp)
 TARGET = GTKDock
 
-.PHONY: all clean shaders
+.PHONY: all clean
 
 all: $(TARGET)
 	@echo "Build completed."
