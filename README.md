@@ -3,7 +3,7 @@
 GTKDock is a GTKmm4 based Dock that tries to be WM agnostic inspired by [nwg-dock](https://github.com/nwg-piotr/nwg-dock-hyprland).
 
 It is very much still in development.
-Right now it works best on hyprland, it works on X11 but animations are choppy.
+Right now it works best on hyprland but needs a little coding knowledge to add support for other window managers.
 
 If WM is wayland it has to support gtk-layer-shell
 
@@ -21,9 +21,9 @@ If WM is wayland it has to support gtk-layer-shell
 
 ## Dependencies:
 
-Compiletime: `X11(Xlib) GLM GTKmm4 gtk-layer-shell`
+Compiletime: `GLM GTKmm4 gtk-layer-shell`
 
-Runtime: `X11: wmctrl xdotool xprop  Wayland: hyprctl (for hyprland)`
+Runtime: `Wayland: hyprctl (for hyprland)`
 
 ## Building and Installing:
 
@@ -58,7 +58,7 @@ or moving config and imgs folders to ~/.config/GTKDock so one can use the execut
 `./GTKDock -d1 -e3 -a0`
 
 ## WM Support and Compatibility
-GTKDock has been tested on Hyprland and GNOME on Xorg
+GTKDock has been tested on Hyprland and GNOME on wayland
 
 to add support to other WM's you'd need to
 1. add functionlity for function in `wm-specific-impl.cpp`
@@ -71,21 +71,13 @@ Returned format should be:
 
 `monitorIdx-:-specificWindowTitle-:-windowClass-:-isFullscreen (0 or 1)-:-PID`
 
-most x11 WMs that support wmctrl xprop and xrandr are implemented as well as hyprland\
+hyprland is implemented \
 each line is directly tied to an AppInstance in GTKDock
 
 
 ### WM specific File: wm-specific.h
 
 defines the wm-specific functions these function are then implemented in wm-specific-impl.cpp
-
-#### `void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin, DockEdge edge)`
-
-Is run on X11 to make window have no decorations be always on top and get ignored by the WM (CWOverrideRedirect)\
-It also moves the window to its correct position
-
-
-If any of those doesn't happen for you this is likely the cause.
 
 #### `void GLS_setup_top_layer(Gtk::Window * win, int dispIdx, int edgeMargin, const std::string& name, DockEdge edge)`
 

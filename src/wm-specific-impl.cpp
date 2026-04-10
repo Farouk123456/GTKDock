@@ -1,120 +1,16 @@
 #include "wm-specific.h"
 #include <gtk4-layer-shell.h>
 #include <gtkmm-4.0/gtkmm.h>
-#include <X11/Xlib.h>
-#include <X11/Xatom.h>
-#include <gdk/x11/gdkx.h>
 
-bool check_layer_shell_support()
+void check_layer_shell_support()
 {
-    auto window = Gtk::make_managed<Gtk::Window>();
-    gtk_layer_init_for_window(GTK_WINDOW(window->gobj()));
     bool supported = gtk_layer_is_supported();
-    return supported;
-}
-
-void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin, DockEdge edge, DockAlignment alignment, bool exclusive)
-{
-    Display * disp = XOpenDisplay(0);
-    unsigned long x_window = gdk_x11_surface_get_xid(GDK_SURFACE(win->get_surface()->gobj()));
-
-    struct {
-        unsigned long flags;
-        unsigned long functions;
-        unsigned long decorations;
-        long input_mode;
-        unsigned long status;
-    } hints;
     
-    hints.flags = (1 << 1); // MWM_HINTS_DECORATIONS
-    hints.decorations = 0;  // 0 means no decorations
-
-    Atom property = XInternAtom(disp, "_MOTIF_WM_HINTS", False);
-    XChangeProperty(disp, x_window, property, property, 32, PropModeReplace, (unsigned char*)&hints, 5);
-    XSetWindowAttributes swa;
-    swa.override_redirect = True;
-
-    XChangeWindowAttributes(disp, x_window, CWOverrideRedirect, &swa);
-
-    GdkMonitor * monitor = GDK_MONITOR((Gdk::Display::get_default()->get_monitors()->get_object(dispIdx))->gobj());
-    
-    GdkRectangle g;
-    gdk_monitor_get_geometry(monitor, &g);
-    int x, y = 0;
-
-    if (!exclusive)
+    if(!supported)
     {
-        if (edge == DockEdge::EDGELEFT)
-        {
-            x = g.x + edgeMargin;
-
-            if (alignment == DockAlignment::CENTER)
-                y = g.y + (g.height - winH) / 2;
-            else if (alignment == DockAlignment::TOP)
-                y = g.y;
-            else if (alignment == DockAlignment::BOTTOM)
-                y = g.y + (g.height - winH);
-        }
-        else if (edge == DockEdge::EDGETOP)
-        {
-            y = g.y + edgeMargin;
-
-            if (alignment == DockAlignment::CENTER)
-                x = g.x + (g.width - winW) / 2;
-            else if (alignment == DockAlignment::LEFT)
-                x = g.x;
-            else if (alignment == DockAlignment::RIGHT)
-                x = g.x + (g.width - winW);
-        }
-        else if (edge == DockEdge::EDGERIGHT)
-        {
-            x = g.x + g.width - edgeMargin - winW;
-
-            if (alignment == DockAlignment::CENTER)
-                y = g.y + (g.height - winH) / 2;
-            else if (alignment == DockAlignment::TOP)
-                y = g.y;
-            else if (alignment == DockAlignment::BOTTOM)
-                y = g.y + (g.height - winH);
-        }
-        else if (edge == DockEdge::EDGEBOTTOM)
-        {
-            y = g.y + g.height - winH - edgeMargin;
-
-            if (alignment == DockAlignment::CENTER)
-                x = g.x + (g.width - winW) / 2;
-            else if (alignment == DockAlignment::LEFT)
-                x = g.x;
-            else if (alignment == DockAlignment::RIGHT)
-                x = g.x + (g.width - winW);
-        }
-    } else
-    {
-        if (edge == DockEdge::EDGELEFT)
-        {
-            x = g.x;
-            y = g.y;
-        }
-        else if (edge == DockEdge::EDGETOP)
-        {
-            x = g.x;
-            y = g.y;
-        }
-        else if (edge == DockEdge::EDGERIGHT)
-        {
-            x = g.x + (g.width - winW);
-            y = g.y;
-        }
-        else if (edge == DockEdge::EDGEBOTTOM)
-        {
-            x = g.x;
-            y = g.y + (g.height - winH);
-        }
+        std::cout << "gtk-layer-shell protocol is not supported on your wayland WM" << std::endl;
+        std::exit(0);
     }
-
-    XMoveWindow(disp, x_window, x,y);
-
-    XFlush(disp);
 }
 
 void GLS_setup_top_layer(Gtk::Window * win, int dispIdx, int edgeMargin, const std::string& name, DockEdge edge, DockAlignment alignment, bool exclusive, int winW, int winH)

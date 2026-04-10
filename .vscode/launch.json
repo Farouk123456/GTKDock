@@ -9,10 +9,10 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/GTKDock",
-            "args": ["-d0", "-e0", "-a2"],
+            "args": ["-d1", "-e2", "-a0"],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],// {"name": "XDG_SESSION_TYPE", "value": "x11"}],
+            "cwd": "${fileDirname}",
+            "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
             "setupCommands": [

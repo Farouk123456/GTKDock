@@ -18,8 +18,6 @@
 #include <gtkmm-4.0/gtkmm.h>
 #include "utils.h"
 
-void onrealizeXDock(Gtk::Window * win, int dispIdx, int winW, int winH, int edgeMargin, DockEdge edge, DockAlignment alignment, bool exclusive);
-
 void GLS_setup_top_layer(Gtk::Window * win, int dispIdx, int edgeMargin, const std::string& name, DockEdge edge, DockAlignment alignment, bool exclusive, int winW, int winH);
 
 void GLS_chngMargin(Gtk::Window * win, int newMargin, DockEdge edge);
@@ -28,6 +26,6 @@ void openInstance(AppInstance i);
 
 void closeInstance(std::vector<AppInstance> instances);
 
-bool check_layer_shell_support();
+void check_layer_shell_support();
 
 void populateInstanceMenuWithWMSpecific(Gtk::Box* popover_box, AppInstance inst);

@@ -10,7 +10,6 @@ window .container .fullscreen {
     background: #00000000;
 }
 
-/* works only under wayland simulated for x11 i.e. no css*/
 .hotspot {
     background: #00000000;
     box-shadow: inset 0 0 1px rgba(0,0,0,0.01);

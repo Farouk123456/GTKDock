@@ -2,9 +2,13 @@
 
 std::string getRes(std::string file)
 {
-    if (std::filesystem::exists(Glib::get_home_dir() + "/.config/GTKDock"))
-        return Glib::get_home_dir() + "/.config/GTKDock/" + file;
-    return file;
+    if (std::filesystem::exists(Glib::get_home_dir() + "/.config/GTKDock/" + file))
+        return (Glib::get_home_dir() + "/.config/GTKDock/" + file);
+    else if (std::filesystem::exists("./" + file))
+        return ("./" + file);
+
+    std::cout << "Could not find file: " << file << std::endl;
+    std::exit(-1);
 }
 
 std::vector<std::string> splitStr(std::string str, std::string separator)
@@ -63,19 +67,22 @@ std::vector<std::filesystem::path> getDesktopFileSearchPaths()
     return searchPaths;
 }
 
-std::vector<std::filesystem::path> findDesktopFiles() {
-    std::vector<std::filesystem::path> desktopFiles;
+std::vector<DesktopEntry> findDesktopFiles() {
+    std::vector<DesktopEntry> desktopFiles;
 
     for (const auto& path : searchPaths) {
         if (std::filesystem::exists(path)) {
             for (const auto& entry : std::filesystem::directory_iterator(path)) {
-                if (entry.path().extension() == ".desktop") {
-                    desktopFiles.push_back(entry.path());
+                if (entry.path().extension() == ".desktop") 
+                {
+                    auto t = parseDesktopFile(entry.path());
+                    if (t.desktopFile != "")
+                        desktopFiles.push_back(t);
                 }
             }
         }
     }
-    
+
     return desktopFiles;
 }
 
@@ -88,43 +95,76 @@ std::string trim(const std::string& str) {
 
 std::string cleanExecCommand(const std::string& cmd) {
     std::string result = cmd;
-
-    result = trim(result);
-    return result;
+    // List of codes to remove: %f, %u, %F, %U
+    const std::string codes[] = {"%f", "%u", "%F", "%U"};
+    
+    for (const auto &code : codes) {
+        size_t pos = 0;
+        while ((pos = result.find(code, pos)) != std::string::npos) {
+            result.erase(pos, code.length());
+            // Do not increment pos to check for overlapping or adjacent codes
+        }
+    }
+    return trim(result);
 }
 
-std::string findIconPath(const std::string& iconName) {
-    // Try theme icons first
-    try {
-        auto iconTheme = Gtk::IconTheme::get_for_display(Gdk::Display::get_default());
-        auto iconInfo = iconTheme->lookup_icon(iconName, 48);
-        auto ret = iconInfo->get_file()->get_path();
-        if (std::filesystem::exists(ret))
-            return ret;
-    } catch (...) {
-        // Fallback to common paths
-        std::vector<std::string> extensions = {".png", ".svg", ".xpm"};
-        std::vector<std::filesystem::path> searchPaths = {
-            "/usr/share/pixmaps",
-            "/usr/share/icons/hicolor/48x48/apps",
-            "/usr/share/icons/hicolor/scalable/apps",
-            "/usr/share/icons/Adwaita/48x48/apps",
-            "/usr/share/icons"
-        };
+std::string findIconPath(const std::string& iconName)
+{
+    auto iconTheme = Gtk::IconTheme::get_for_display(Gdk::Display::get_default());
+    auto iconInfo = iconTheme->lookup_icon(iconName, 48);
+    auto ret = iconInfo->get_file()->get_path();
 
-        for (const auto& path : searchPaths) {
-            if (!std::filesystem::exists(path)) continue;
-            
-            for (const auto& ext : extensions) {
-                std::filesystem::path iconPath = path / (iconName + ext);
-                if (std::filesystem::exists(iconPath)) {
-                    return iconPath.string();
-                }
+    if (std::filesystem::exists(ret))
+        return ret;
+
+    // Fallback to common paths
+    std::vector<std::string> extensions = {".svg", ".png",".xpm"};
+
+    {
+        auto hits = splitStr(exec("plocate " + iconName), "\n");
+        
+        std::vector<std::string> besthits(extensions.size());;
+        
+        for (auto& hit : hits)
+        {
+            for (int i = 0; i < extensions.size(); i++)
+            {
+                if (std::filesystem::path(hit).extension() == extensions[i])
+                    besthits[i] = hit;
             }
+        }
+
+        for (auto& hit : besthits)
+        {
+            if (std::filesystem::exists(hit))
+                return hit;
         }
     }
 
-    if (std::filesystem::exists(iconName)) {
+    std::vector<std::filesystem::path> searchPaths = {
+        "/usr/share/pixmaps",
+        "/usr/share/icons/hicolor/48x48/apps",
+        "/usr/share/icons/hicolor/scalable/apps",
+        "/usr/share/icons/Adwaita/48x48/apps",
+        "/usr/share/icons",
+        "/usr/share/icons/Adwaita/symbolic/devices",
+        "/usr/share/icons/breeze-dark/actions/24",
+        "/usr/share/icons/breeze-dark/status/24"
+    };
+
+    for (const auto& path : searchPaths) {
+        if (!std::filesystem::exists(path)) continue;
+
+        for (const auto& ext : extensions) {
+            std::filesystem::path iconPath = path / (iconName + ext);
+            if (std::filesystem::exists(iconPath)) {
+                return iconPath.string();
+            }
+        }
+    }
+    
+
+    if (std::filesystem::exists(iconName) && iconName != "" && iconName[0] == '/') {
         return iconName;
     }
 
@@ -132,9 +172,9 @@ std::string findIconPath(const std::string& iconName) {
     return "";
 }
 
-AppEntry parseDesktopFile(const std::filesystem::path& desktopFile) {
-    AppEntry entry;
-    
+DesktopEntry parseDesktopFile(const std::filesystem::path& desktopFile) {
+    DesktopEntry entry;
+    entry.desktopFile = desktopFile;
     std::ifstream file(desktopFile);
     std::string line;
     bool mainSection = false;
@@ -156,7 +196,7 @@ AppEntry parseDesktopFile(const std::filesystem::path& desktopFile) {
         size_t delim = line.find('=');
         if (delim == std::string::npos) continue;
         
-        std::string key = line.substr(0, delim);
+        std::string key = trim(line.substr(0, delim));
         std::string value = line.substr(delim + 1);
         
         if (key == "Name") {
@@ -165,7 +205,13 @@ AppEntry parseDesktopFile(const std::filesystem::path& desktopFile) {
             entry.execCmd = cleanExecCommand(value);
         } else if (key == "Icon") {
             entry.iconPath = findIconPath(value);
-            //std::cout << "Found: " << entry.iconPath << std::endl;
+            //std::cout << entry.name << " Found: " << entry.iconPath << std::endl;
+        } else if (key == "NoDisplay")
+        {
+            if (value.find("true") != std::string::npos)
+            {
+                entry.desktopFile = "";
+            }
         }
     }
     
@@ -174,7 +220,7 @@ AppEntry parseDesktopFile(const std::filesystem::path& desktopFile) {
 
 std::string exec(const std::string& command)
 {
-    char buffer[256];
+    char buffer[BUFSIZ];
     std::string result = "";
     FILE* pipe = popen(command.c_str(), "r");
     if (!pipe) {
@@ -195,78 +241,38 @@ std::string exec(const std::string& command)
     return result;
 }
 
-
-// ugly C functions
-
-char *readLine(FILE *stream)
-{
-    char *buffer = NULL;
-    size_t size = 0;
-    char *newline_found = NULL;
- 
-    do
-    {
-        char *temp = (char *)realloc(buffer, size + BUFSIZ);
-        if (!temp)
-        {
-            free(buffer);
-            return NULL;
-        }
-        buffer = temp;
- 
-        if (!fgets(buffer + size, BUFSIZ, stream))
-        {
-            free(buffer);
-            return NULL;
-        }
- 
-        newline_found = strchr(buffer + size, '\n');
-    } while (!newline_found && (size += BUFSIZ - 1));
- 
-    return buffer;
-}
-
 std::vector<AppInstance> getRunningInstances()
 {
     std::vector<AppInstance> inst = {};
-    char * buffer = NULL;
     
-    FILE* pipe = popen(("bash "+ getRes("conf/list_windows.bash")).c_str(), "r");
-    if (!pipe) {
-        std::cout << "popen failed!" << std::endl;
+    std::string resp = exec("bash "+ getRes("conf/list_windows.bash"));
+    
+    if (resp == "") 
+    {
+        std::cout << "exec failed!" << std::endl;
         return inst;
     }
 
-    try {
-        while ((buffer = readLine(pipe)) != NULL) {
-            std::vector<std::string> s = splitStr(buffer, "-:-");
-            
-            for (int i = 0; i < s.size(); i++)
+    for (auto& line : splitStr(resp, "\n"))
+    {
+        std::vector<std::string> s = splitStr(line, "-:-");
+        for (int i = 0; i < s.size(); i++)
+        {
+            if (s[i].empty())
             {
-                if (s[i].empty())
+                if (i == 0 || i == 3 || i == 4)
                 {
-                    if (i == 0 || i == 3 || i == 4)
-                    {
-                        s[i] = "0";
-                    } else
-                    {
-                        s[i] = "-";
-                    }
+                    s[i] = "0";
+                } else
+                {
+                    s[i] = "-";
                 }
             }
-            
-            inst.push_back( { std::stoi(s[0]), s[1], s[2], (bool)std::stoi(s[3]), std::stoi(s[4]) } );
-            free(buffer);
         }
-    } catch (...) {
-        if (buffer != NULL)
-            free(buffer);
         
-        pclose(pipe);
-        throw;
+        inst.push_back( { std::stoi(s[0]), s[1], s[2], (bool)std::stoi(s[3]), std::stoi(s[4]) } );
     }
-    
-    pclose(pipe);
+
     return inst;
 }
 
@@ -293,6 +299,7 @@ std::string normalizeString(const std::string& input) {
     return result;
 }
 
+// to_lower + no special chars ex. "SomeVery-weirdApP-name-or-class" --> "someveryweirdappnameorclass"
 bool find_case_insensitive(const std::string& str, const std::string& substr) {
     std::string lower_str = normalizeString(str);
     std::string lower_sub = normalizeString(substr);
@@ -300,96 +307,29 @@ bool find_case_insensitive(const std::string& str, const std::string& substr) {
     return (lower_str.find(lower_sub) != std::string::npos);
 }
 
-std::string getSmallestString(const std::vector<std::string>& strings)
-{
-    int ind = 0;
-    int size = 0;
-    
-    for (int i = 0; i < strings.size(); i++)
-    {
-        std::string str = strings[i];
-        if (str.size() > size)
-        {
-            ind = i;
-            size = str.size();
-        }
-    }
-
-    return strings[ind];
-}
-
-// (class, desktopfile)
-std::unordered_map <std::string, std::string> desktopfileCache;
-
-std::string getDesktopFileOfInstances(const std::vector<AppInstance>& instances)
+DesktopEntry getEntryOfInstances(const std::vector<AppInstance>& instances, std::vector<DesktopEntry> DesktopFiles)
 {
     std::string wclass = instances[0].wclass;
-
-    if (desktopfileCache.contains(wclass))
-        return desktopfileCache[wclass];
+    std::string title = instances[0].title;
 
     std::vector <std::string> lastFiles = {};
 
-    for (const auto& path : searchPaths)
+    for (auto& dE : DesktopFiles)
     {
-        if (std::filesystem::exists(path / ((wclass) + ".desktop")))
-        {
-            desktopfileCache[wclass] = (path / ((wclass) + ".desktop")).string();
-            return desktopfileCache[wclass];
-        }
-        else if (std::filesystem::exists(path / (to_lower(wclass) + ".desktop")))
-        {
-            desktopfileCache[wclass] = (path / (to_lower(wclass) + ".desktop")).string();
-            return desktopfileCache[wclass];
-        }
+        if (find_case_insensitive(dE.desktopFile, wclass))
+            return dE;
+
+        if (find_case_insensitive(dE.name, wclass))
+            return dE;
+        
+        if (find_case_insensitive(dE.desktopFile, title))
+            return dE;
+
+        if (find_case_insensitive(dE.name, title))
+            return dE;
     }
 
-    for (const auto& desktopFile : DesktopFiles)
-    {
-        std::string desktopFileName = desktopFile.stem().string();
-    
-        if (find_case_insensitive(desktopFileName, wclass))
-        {
-            desktopfileCache[wclass] = desktopFile;
-            return desktopfileCache[wclass];
-        }
-    
-        for (AppInstance in : instances)
-        {
-            bool addedToLastResort = false;
-
-            if (!addedToLastResort && find_case_insensitive(desktopFile.stem().string(), splitStr(in.title, " ")[0]))
-            {
-                lastFiles.emplace_back(desktopFile);
-                addedToLastResort = true;
-            }
-        }
-    }
-
-    // heuristic smallest filepath is best
-    if (lastFiles.size() > 0)
-    {
-        desktopfileCache[wclass] = getSmallestString(lastFiles);
-        return desktopfileCache[wclass];
-    }
-
-    // last resort open all files and search for title or class maybe cache desktop files
-
-    for (const auto& desktopFile : DesktopFiles)
-    {
-        AppEntry dF = parseDesktopFile(desktopFile);
-
-        for (AppInstance in : instances)
-        {
-            if (find_case_insensitive(dF.name, splitStr(in.title, " ")[0]))
-            {
-                desktopfileCache[wclass] = desktopFile;
-                return desktopfileCache[wclass];
-            }
-        }
-    }
-
-    return "";
+    return DesktopEntry();
 }
 
 bool getIfThisIsOnlyInstance()

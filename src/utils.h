@@ -27,14 +27,23 @@ struct AppInstance
     int pid = -1;
 };
 
-struct AppEntry
+struct DesktopEntry
 {
-    int count_instances = 0;
-    bool isPinned = false;
     std::string name = "";
     std::string execCmd = "";
     std::string iconPath = "";
     std::string desktopFile = "";
+
+    bool operator==(DesktopEntry& other) const {
+        return (name == other.name && execCmd == other.execCmd);
+    }
+};
+
+struct AppEntry
+{
+    int count_instances = 0;
+    bool isPinned = false;
+    DesktopEntry app;
     std::vector <AppInstance> instances = {};
 };
 
@@ -67,30 +76,18 @@ std::vector<std::filesystem::path> getDesktopFileSearchPaths();
 static std::vector<std::filesystem::path> searchPaths = getDesktopFileSearchPaths(); 
 
 // find all desktop files in searchPaths
-std::vector<std::filesystem::path> findDesktopFiles();
-
-// never changes so make it a static vriable
-static std::vector<std::filesystem::path> DesktopFiles = findDesktopFiles();
-
-//removes leading and trailing whitespace characters (spaces and tabs) from a given string
-std::string trim(const std::string& str);
+std::vector<DesktopEntry> findDesktopFiles();
 
 std::string cleanExecCommand(const std::string& cmd);
 
 std::string findIconPath(const std::string& iconName);
 
-AppEntry parseDesktopFile(const std::filesystem::path& desktopFile);
+DesktopEntry parseDesktopFile(const std::filesystem::path& desktopFile);
 
 std::string exec(const std::string& command);
 
 // parses result of list_windows.bash into vector of AppInstance
 std::vector<AppInstance> getRunningInstances();
-
-// string chars to lower case
-std::string to_lower(const std::string& s);
-
-// to_lower + no special chars ex. "SomeVery-weirdApP-name-or-class" --> "someveryweirdappnameorclass"
-std::string normalizeString(const std::string& input);
 
 // find if normalizeString(substr) is found in normalizeString(str)
 bool find_case_insensitive(const std::string& str, const std::string& substr);
@@ -98,7 +95,7 @@ bool find_case_insensitive(const std::string& str, const std::string& substr);
 std::string getSmallestString(const std::vector<std::string>& strings);
 
 // finds .desktop file of instances using various heuristics
-std::string getDesktopFileOfInstances(const std::vector<AppInstance>& instances);
+DesktopEntry getEntryOfInstances(const std::vector<AppInstance>& instances, std::vector<DesktopEntry> DesktopFiles);
 
 bool getIfThisIsOnlyInstance();
 
