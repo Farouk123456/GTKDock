@@ -14,6 +14,7 @@
 #include <thread>
 #include <filesystem>
 #include <memory>
+#include <mutex>
 #include <gtkmm-4.0/gtkmm.h>
 #include "utils.h"
 #include "wm-specific.h"

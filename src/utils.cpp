@@ -1,4 +1,6 @@
 #include "utils.h"
+#include <string>
+#include <unordered_map>
 
 std::string getRes(std::string file)
 {
@@ -327,6 +329,58 @@ DesktopEntry getEntryOfInstances(const std::vector<AppInstance>& instances, std:
 
         if (find_case_insensitive(dE.name, title))
             return dE;
+    }
+
+    // last attempt
+    std::vector<std::string> searchTerms = {};
+
+    std::vector<std::string> temp =  splitStr(wclass, " ");
+    searchTerms.insert(searchTerms.end(), temp.begin(), temp.end());
+
+    temp =  splitStr(wclass, ".");
+    searchTerms.insert(searchTerms.end(), temp.begin(), temp.end());
+
+    temp =  splitStr(wclass, "-");
+    searchTerms.insert(searchTerms.end(), temp.begin(), temp.end());
+
+    temp =  splitStr(title, " ");
+    searchTerms.insert(searchTerms.end(), temp.begin(), temp.end());
+
+    temp =  splitStr(title, ".");
+    searchTerms.insert(searchTerms.end(), temp.begin(), temp.end());
+
+    temp =  splitStr(title, "-");
+    searchTerms.insert(searchTerms.end(), temp.begin(), temp.end());
+
+    std::unordered_map<std::string, int> hits = {};
+
+    for (std::string& term : searchTerms)
+    {
+        std::vector <std::string> hitFiles = splitStr(exec("plocate " + term + " | grep --color=never \"\\.desktop\""), "\n");
+        for (std::string& file : hitFiles)
+        {
+            if (!hits.contains(file))
+                hits[file] = 0;
+
+            hits[file] += 1;
+        }
+    }
+
+    if (hits.size() > 0)
+    {
+        int score = 0;
+        std::string file = "";
+
+        for (auto& pair : hits)
+        {
+            if (pair.second > score)
+            {
+                file = pair.first;
+                score = pair.second;
+            }
+        }
+
+        return parseDesktopFile(file);
     }
 
     return DesktopEntry();
