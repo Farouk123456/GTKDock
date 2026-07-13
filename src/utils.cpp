@@ -324,11 +324,11 @@ DesktopEntry getEntryOfInstances(const std::vector<AppInstance>& instances, std:
         if (find_case_insensitive(dE.name, wclass))
             return dE;
         
-        if (find_case_insensitive(dE.desktopFile, title))
-            return dE;
+        //if (find_case_insensitive(dE.desktopFile, title))
+        //    return dE;
 
-        if (find_case_insensitive(dE.name, title))
-            return dE;
+        //if (find_case_insensitive(dE.name, title))
+        //    return dE;
     }
 
     // last attempt
